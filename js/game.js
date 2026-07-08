@@ -20,6 +20,7 @@ function freshState() {
     autoUp: { unlocked: false, level: 0, on: true, timer: 0 },  // (구버전 호환용, 미사용)
     achievements: {},
     achRows: {},
+    compression: { cp: D(0), totalCp: D(0), resets: 0, up: { particle: 0, conv: 0, self: 0, start: 0 } },
     sacrifice: { mult: D(1), recovery: 1 },
     autos: (function () {
       var o = {};
@@ -227,7 +228,7 @@ function genRate(key) {
   r = r.mul(Decimal.pow(TRACKS.accel.effect, state.tracks.accel));
   if (key === "electron" && state.special.degeneracy) r = r.mul(10);
   if (key === "neutron" && state.special.nstar) r = r.mul(10);
-  r = r.mul(achParticleMult(key));
+  r = r.mul(achParticleMult(key)).mul(compParticleMult());
   if (key === "neutron") r = r.mul(sacNeutronMult());
   return r;
 }
@@ -246,9 +247,60 @@ function elementSeed() {
   return s;
 }
 
-// 압축 업그레이드로 강화되는 "원소 자기생산" 계수 (없으면 0)
-function compSelfRate() {
-  return state.compression ? D(state.compression.selfRate || 0) : D(0);
+// ---- 핵 압축 (프레스티지) 배율 ----
+function compUp(id) { return state.compression ? (state.compression.up[id] || 0) : 0; }
+function compParticleMult() { return Decimal.pow(COMP_UPGRADES[0].effect, compUp("particle")); }
+function compConvMult() { return Decimal.pow(COMP_UPGRADES[1].effect, compUp("conv")); }
+function compSelfRate() { return D(COMP.selfPerLevel).mul(compUp("self")); }
+function compStartLevel() { return COMP_UPGRADES[3].effect * compUp("start"); }
+
+function compValue(id) {
+  var u = null;
+  COMP_UPGRADES.forEach(function (x) { if (x.id === id) u = x; });
+  return u;
+}
+function compUpCost(id) {
+  var u = compValue(id);
+  return D(u.base).mul(Decimal.pow(u.mult, compUp(id))).ceil();
+}
+function buyCompUp(id) {
+  var cost = compUpCost(id);
+  if (state.compression.cp.lt(cost)) return false;
+  state.compression.cp = state.compression.cp.sub(cost);
+  state.compression.up[id]++;
+  return true;
+}
+
+// 압축 시 얻는 CP = (원소 가치 합 / scale) ^ exp
+function compressWorth() {
+  var w = D(0);
+  for (var n = 1; n <= state.researched; n++) {
+    w = w.add(state.elements[n - 1].mul(Decimal.pow(ELEM.eGrow, n - 1)));
+  }
+  return w;
+}
+function compressGain() {
+  var w = compressWorth();
+  if (w.lte(0)) return D(0);
+  return Decimal.pow(w.div(COMP.scale), COMP.exp).floor();
+}
+function compressUnlocked() { return state.researched >= COMP.reqResearched; }
+function canCompress() { return compressUnlocked() && compressGain().gte(1); }
+
+function doCompress() {
+  if (!canCompress()) return false;
+  var g = compressGain();
+  state.compression.cp = state.compression.cp.add(g);
+  state.compression.totalCp = state.compression.totalCp.add(g);
+  state.compression.resets++;
+  // 리셋: 입자·생성기·변환기·E·원소량 (연구/업그레이드는 유지)
+  state.particles = { electron: D(0), proton: D(0), neutron: D(0) };
+  state.genLevels = { electron: compStartLevel(), proton: 0, neutron: 0 };
+  state.convLevels = { electron: 0, proton: 0, neutron: 0 };
+  state.convOn = { electron: true, proton: true, neutron: true };
+  state.entropy = D(0);
+  state.elements = ELEMENTS.map(function () { return D(0); });
+  return true;
 }
 
 function elementProdRate(n) {
@@ -293,7 +345,7 @@ function coreEntropyRate() {
     var effective = state.particles[k].gt(0)
       ? convRate(k)
       : Decimal.min(convRate(k), genRate(k));
-    r = r.add(effective.mul(CONVERTERS[k].value));
+    r = r.add(effective.mul(CONVERTERS[k].value).mul(compConvMult()));
   });
   return r.mul(achEntropyMult());
 }
@@ -329,7 +381,7 @@ function tick(dt) {
     var amt = Decimal.min(state.particles[k], convRate(k).mul(dt)).mul(rec);
     if (amt.lte(0)) return;
     state.particles[k] = state.particles[k].sub(amt);
-    gainEntropy(amt.mul(CONVERTERS[k].value).mul(achEntropyMult()));
+    gainEntropy(amt.mul(CONVERTERS[k].value).mul(achEntropyMult()).mul(compConvMult()));
   });
 
   // 3. 원소 연쇄 생산 (항성 이전에는 1.8e308 상한)
@@ -490,7 +542,7 @@ function actionConvertAll(key) {
   var amt = state.particles[key].floor();
   if (amt.lte(0)) return D(0);
   state.particles[key] = state.particles[key].sub(amt);
-  var gained = amt.mul(CONVERTERS[key].value);
+  var gained = amt.mul(CONVERTERS[key].value).mul(compConvMult());
   gainEntropy(gained);
   return gained;
 }

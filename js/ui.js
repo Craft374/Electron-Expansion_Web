@@ -56,6 +56,8 @@ function updateNav() {
   setHidden("nav-elements", state.genLevels.neutron < 1 && state.researched < 1);
   setHidden("nav-isotopes", state.researched < 2);
   setHidden("nav-automation", state.researched < 1);
+  setHidden("nav-compression", !compressUnlocked());
+  setHidden("badge-compression", !canCompress());
   setHidden("nav-star", state.researched < ELEMENTS.length);
   setHidden("nav-planets", !state.star);
   var solarVisible = state.solarSystem ||
@@ -193,7 +195,7 @@ function updateGens() {
     var mbtn = el("conv-manual-" + k);
     setHidden("conv-manual-" + k, lv < 1);
     if (lv >= 1) {
-      var gain = state.particles[k].floor().mul(CONVERTERS[k].value);
+      var gain = state.particles[k].floor().mul(CONVERTERS[k].value).mul(compConvMult());
       mbtn.textContent = "전량 변환 → " + format(gain, 0) + " E";
       mbtn.disabled = state.particles[k].lt(1);
     }
@@ -797,6 +799,39 @@ function drainAchToasts() {
 }
 
 // ============================================================
+// 핵 압축 탭
+// ============================================================
+function buildCompUps() {
+  var box = el("comp-up-list");
+  box.innerHTML = COMP_UPGRADES.map(function (u) {
+    return '<div class="iso-card">' +
+      '<div class="iso-name">' + u.name + ' <small id="comp-lv-' + u.id + '" style="color:var(--dim)"></small></div>' +
+      '<div class="iso-desc">' + u.desc + '</div>' +
+      '<div class="cost-line" id="comp-cost-' + u.id + '"></div>' +
+      '<button class="btn" id="comp-buy-' + u.id + '">강화</button></div>';
+  }).join("");
+  COMP_UPGRADES.forEach(function (u) {
+    el("comp-buy-" + u.id).onclick = function () { buyCompUp(u.id); updateUI(); };
+  });
+}
+function updateCompression() {
+  if (!sig.compBuilt) { buildCompUps(); sig.compBuilt = true; }
+  el("txt-cp").textContent = format(state.compression.cp, 0);
+  el("txt-cp-total").textContent = format(state.compression.totalCp, 0);
+  el("txt-cp-resets").textContent = state.compression.resets;
+  el("txt-cp-gain").textContent = format(compressGain(), 0);
+  el("btn-compress").disabled = !canCompress();
+  COMP_UPGRADES.forEach(function (u) {
+    el("comp-lv-" + u.id).textContent = "Lv " + compUp(u.id);
+    var cost = compUpCost(u.id);
+    el("comp-cost-" + u.id).innerHTML =
+      '<span class="cost-item ' + (state.compression.cp.gte(cost) ? "ok" : "no") + '">' +
+      format(cost, 0) + ' CP</span>';
+    el("comp-buy-" + u.id).disabled = state.compression.cp.lt(cost);
+  });
+}
+
+// ============================================================
 // 자동화 탭
 // ============================================================
 
@@ -910,6 +945,7 @@ function updateUI() {
   if (activeTab === "main") updateGens();
   else if (activeTab === "ach") updateAch();
   else if (activeTab === "automation") updateAuto();
+  else if (activeTab === "compression") updateCompression();
   else if (activeTab === "elements") { updateFusion(); updateResearch(); updateElemGrid(); updateSpecials(); }
   else if (activeTab === "isotopes") updateIsotopes();
   else if (activeTab === "star") updateStar();
@@ -964,6 +1000,13 @@ function initUI() {
   // 엔트로피 희생
   el("btn-sacrifice").onclick = function () {
     if (doSacrifice()) updateUI();
+  };
+
+  // 핵 압축
+  el("btn-compress").onclick = function () {
+    if (canCompress() && confirm("핵 압축을 실행할까요? 입자·생성기·변환기·E·원소 보유량이 리셋됩니다.")) {
+      doCompress(); updateUI();
+    }
   };
 
   // 자동화: 전체 최대 단축 / 전체 가동·정지

@@ -29,6 +29,12 @@ function saveToString() {
     autoUp: s.autoUp,
     achievements: s.achievements,
     achRows: s.achRows,
+    compression: {
+      cp: s.compression.cp.toString(),
+      totalCp: s.compression.totalCp.toString(),
+      resets: s.compression.resets,
+      up: s.compression.up
+    },
     sacrifice: { mult: s.sacrifice.mult.toString(), recovery: s.sacrifice.recovery },
     autos: s.autos,
     star: s.star,
@@ -72,6 +78,12 @@ function loadFromString(str) {
   if (obj.autoUp) Object.assign(s.autoUp, obj.autoUp);
   if (obj.achievements) s.achievements = obj.achievements;
   if (obj.achRows) s.achRows = obj.achRows;
+  if (obj.compression) {
+    if (obj.compression.cp) s.compression.cp = D(obj.compression.cp);
+    if (obj.compression.totalCp) s.compression.totalCp = D(obj.compression.totalCp);
+    if (typeof obj.compression.resets === "number") s.compression.resets = obj.compression.resets;
+    if (obj.compression.up) Object.assign(s.compression.up, obj.compression.up);
+  }
   if (obj.sacrifice) {
     if (obj.sacrifice.mult) s.sacrifice.mult = D(obj.sacrifice.mult);
     if (typeof obj.sacrifice.recovery === "number") s.sacrifice.recovery = obj.sacrifice.recovery;

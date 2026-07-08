@@ -161,6 +161,26 @@ var AUTOUP = {
   stepCostMult: 50
 };
 
+// ---------- 핵 압축 (첫 프레스티지) ----------
+// 입자·생성기·변환기·E·원소량을 리셋하고 압축 포인트(CP)를 얻는다.
+// 연구(해금)와 각종 업그레이드는 유지된다. CP는 영구 강화에 쓴다.
+var COMP = {
+  reqResearched: 5,      // 붕소 이후 해금
+  scale: "1e6",          // CP = (원소가치 / scale) ^ exp
+  exp: 0.2,
+  selfPerLevel: 0.002    // 원소 자기증식 업그레이드: 레벨당 +0.2%/초
+};
+var COMP_UPGRADES = [
+  { id: "particle", name: "입자 응축", desc: "입자 생성기 생산 ×1.6 / 레벨",
+    base: 2, mult: 2.2, effect: 1.6 },
+  { id: "conv", name: "변환 효율", desc: "변환기 E 산출 ×1.6 / 레벨",
+    base: 3, mult: 2.2, effect: 1.6 },
+  { id: "self", name: "원소 자기증식", desc: "각 원소가 자기 자신을 +0.2%/초 추가 생산 / 레벨",
+    base: 5, mult: 2.6 },
+  { id: "start", name: "압축 관성", desc: "압축 후 전자 생성기 시작 레벨 +3 / 레벨",
+    base: 4, mult: 3, effect: 3 }
+];
+
 // ---------- 동위원소 (간접 보조 아이템, 중성자 소모) ----------
 var ISOTOPES = [
   { id: "h2",   name: "중수소 ²H",     req: 2,  cost: { neutron: 5e3,  entropy: "5e5" },

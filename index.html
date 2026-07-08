@@ -34,6 +34,7 @@
         <button class="side-btn hidden" data-tab="elements" id="nav-elements"><span class="ic">⬡</span><span class="lb">원소</span><span class="nav-badge hidden" id="badge-elements"></span></button>
         <button class="side-btn hidden" data-tab="isotopes" id="nav-isotopes"><span class="ic">⧉</span><span class="lb">동위원소</span><span class="nav-badge hidden" id="badge-isotopes"></span></button>
         <button class="side-btn hidden" data-tab="automation" id="nav-automation"><span class="ic">⟳</span><span class="lb">자동화</span></button>
+        <button class="side-btn hidden" data-tab="compression" id="nav-compression"><span class="ic">◈</span><span class="lb">핵 압축</span><span class="nav-badge hidden" id="badge-compression"></span></button>
         <button class="side-btn hidden" data-tab="star" id="nav-star"><span class="ic">✦</span><span class="lb">항성</span></button>
         <button class="side-btn hidden" data-tab="planets" id="nav-planets"><span class="ic">◍</span><span class="lb">행성</span></button>
         <button class="side-btn hidden" data-tab="solar" id="nav-solar"><span class="ic">☉</span><span class="lb">태양계</span></button>
@@ -96,6 +97,21 @@
             <button class="btn" id="btn-auto-all-max">전체 최대 단축</button>
           </div>
           <div id="auto-list"></div>
+        </div>
+      </section>
+
+      <!-- 핵 압축 -->
+      <section id="tab-compression" class="tab-page hidden">
+        <div class="panel purple">
+          <div class="panel-head"><span class="dots purple"></span>핵 압축 — 첫 프레스티지</div>
+          <div class="panel-sub">입자·생성기·변환기·E·<b>원소 보유량</b>을 모두 리셋하고 <b>압축 포인트(CP)</b>를 얻습니다. 연구 해금과 각종 업그레이드는 유지됩니다. CP는 아래 영구 강화에 씁니다.</div>
+          <div class="kv">보유 CP: <span id="txt-cp"></span> · 누적 <span id="txt-cp-total"></span> · 압축 <span id="txt-cp-resets"></span>회</div>
+          <div class="kv">지금 압축하면: <span id="txt-cp-gain"></span> CP</div>
+          <button class="btn big-purple" id="btn-compress">◈ 핵 압축</button>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="dots"></span>압축 강화 (CP 소모)</div>
+          <div id="comp-up-list"></div>
         </div>
       </section>
 
