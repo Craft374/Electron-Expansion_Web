@@ -389,6 +389,10 @@ input[type="range"] {
 .iso-card.owned { border-color: rgba(111, 227, 161, 0.35); }
 .iso-owned-tag { color: var(--green); font-size: 13px; font-weight: 600; text-align: center; padding: 8px; }
 
+/* ============ 도전 ============ */
+#challenge-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.iso-card.ch-active { border-color: var(--purple); box-shadow: 0 0 14px rgba(185,138,247,0.25); }
+
 /* ============ 합성 ============ */
 #synth-list {
   display: grid;

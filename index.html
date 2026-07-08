@@ -36,6 +36,7 @@
         <button class="side-btn hidden" data-tab="isotopes" id="nav-isotopes"><span class="ic">⧉</span><span class="lb">동위원소</span><span class="nav-badge hidden" id="badge-isotopes"></span></button>
         <button class="side-btn hidden" data-tab="automation" id="nav-automation"><span class="ic">⟳</span><span class="lb">자동화</span></button>
         <button class="side-btn hidden" data-tab="compression" id="nav-compression"><span class="ic">◈</span><span class="lb">핵 압축</span><span class="nav-badge hidden" id="badge-compression"></span></button>
+        <button class="side-btn hidden" data-tab="challenge" id="nav-challenge"><span class="ic">⚔</span><span class="lb">도전</span></button>
         <button class="side-btn hidden" data-tab="star" id="nav-star"><span class="ic">✦</span><span class="lb">항성</span></button>
         <button class="side-btn hidden" data-tab="planets" id="nav-planets"><span class="ic">◍</span><span class="lb">행성</span></button>
         <button class="side-btn hidden" data-tab="solar" id="nav-solar"><span class="ic">☉</span><span class="lb">태양계</span></button>
@@ -98,6 +99,15 @@
             <button class="btn" id="btn-auto-all-max">전체 최대 단축</button>
           </div>
           <div id="auto-list"></div>
+        </div>
+      </section>
+
+      <!-- 도전 -->
+      <section id="tab-challenge" class="tab-page hidden">
+        <div class="panel">
+          <div class="panel-head"><span class="dots"></span>주기별 도전 <span class="head-tag" id="txt-ch-active"></span></div>
+          <div class="panel-sub">각 주기의 원소를 모두 얻으면 그 주기의 도전이 열립니다. 진입하면 원소 진행이 <b>리셋</b>되고 제약이 걸립니다. 목표까지 재연구하면 그 주기 원소에 <b>영구 배율</b>을 얻습니다. 깨지 않고 넘어가도 됩니다.</div>
+          <div id="challenge-list"></div>
         </div>
       </section>
 

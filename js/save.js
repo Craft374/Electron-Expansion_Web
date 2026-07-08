@@ -36,6 +36,11 @@ function saveToString() {
       up: s.compression.up
     },
     compounds: s.compounds,
+    challenge: {
+      active: s.challenge.active,
+      completed: s.challenge.completed,
+      antimatter: s.challenge.antimatter.toString()
+    },
     sacrifice: { mult: s.sacrifice.mult.toString(), recovery: s.sacrifice.recovery },
     stellar: {
       collapses: s.stellar.collapses,
@@ -92,6 +97,11 @@ function loadFromString(str) {
     if (obj.compression.up) Object.assign(s.compression.up, obj.compression.up);
   }
   if (obj.compounds) s.compounds = obj.compounds;
+  if (obj.challenge) {
+    s.challenge.active = obj.challenge.active || null;
+    s.challenge.completed = obj.challenge.completed || {};
+    if (obj.challenge.antimatter) s.challenge.antimatter = D(obj.challenge.antimatter);
+  }
   if (obj.stellar) {
     if (typeof obj.stellar.collapses === "number") s.stellar.collapses = obj.stellar.collapses;
     if (obj.stellar.bonus) s.stellar.bonus = D(obj.stellar.bonus);

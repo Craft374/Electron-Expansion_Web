@@ -22,6 +22,7 @@ function freshState() {
     achRows: {},
     compression: { cp: D(0), totalCp: D(0), resets: 0, up: { particle: 0, conv: 0, self: 0, start: 0 } },
     compounds: {},
+    challenge: { active: null, completed: {}, antimatter: D(1) },
     sacrifice: { mult: D(1), recovery: 1 },
     stellar: { collapses: 0, bonus: D(1), firstStar: false, permanent: false },
     autos: (function () {
@@ -213,6 +214,66 @@ function specialMult(n) {
   return m;
 }
 
+// ---- 주기별 도전 ----
+function chActive() { return state.challenge ? state.challenge.active : null; }
+function findChallenge(id) {
+  for (var i = 0; i < CHALLENGES.length; i++) if (CHALLENGES[i].id === id) return CHALLENGES[i];
+  return null;
+}
+function challengeUnlocked(ch) {
+  return state.researched >= CHALLENGE_PERIODS[ch.period][1];
+}
+// 진행 중 도전의 원소 생산 배율 (무질서 등)
+function chElemMult() {
+  return chActive() === "ch2" ? D(0.05) : D(1);
+}
+function chEntropyMult() {
+  return chActive() === "ch4" ? D(0.02) : D(1);
+}
+// 클리어한 도전의 영구 보상 배율
+function chRewardMult(n) {
+  var m = D(1);
+  for (var i = 0; i < CHALLENGES.length; i++) {
+    var ch = CHALLENGES[i];
+    if (state.challenge.completed[ch.id] && ch.rewardEls.indexOf(n) >= 0) m = m.mul(D(ch.rewardMult));
+  }
+  return m;
+}
+function resetElementRun() {
+  state.particles = { electron: D(0), proton: D(0), neutron: D(0) };
+  state.genLevels = { electron: compStartLevel(), proton: 0, neutron: 0 };
+  state.convLevels = { electron: 0, proton: 0, neutron: 0 };
+  state.convOn = { electron: true, proton: true, neutron: true };
+  state.entropy = D(0);
+  state.elements = ELEMENTS.map(function () { return D(0); });
+  state.researched = 0;
+}
+function enterChallenge(id) {
+  var ch = findChallenge(id);
+  if (!ch || !challengeUnlocked(ch) || chActive()) return false;
+  resetElementRun();
+  state.challenge.active = id;
+  state.challenge.antimatter = D(1);
+  return true;
+}
+function exitChallenge(complete) {
+  if (!chActive()) return false;
+  if (complete) state.challenge.completed[state.challenge.active] = true;
+  state.challenge.active = null;
+  return true;
+}
+// 틱마다: 반물질 성장·목표 판정
+function challengeTick(dt) {
+  var id = chActive();
+  if (!id) return;
+  var ch = findChallenge(id);
+  if (id === "ch3") {
+    state.challenge.antimatter = D(state.challenge.antimatter).mul(Decimal.pow(CH_ANTIMATTER_GROW, dt));
+    if (state.challenge.antimatter.gte(CH_ANTIMATTER_CAP)) { exitChallenge(false); return; }
+  }
+  if (state.researched >= ch.goalResearch) exitChallenge(true);
+}
+
 // ---- 합성 (화합물) ----
 function findCompound(id) {
   for (var i = 0; i < COMPOUNDS.length; i++) if (COMPOUNDS[i].id === id) return COMPOUNDS[i];
@@ -247,7 +308,8 @@ function synthMult(n) {
 }
 
 function elementMult(n) {
-  var m = fusionMult(n).mul(specialMult(n)).mul(achElementMult()).mul(synthMult(n)).mul(starBonusMult());
+  var m = fusionMult(n).mul(specialMult(n)).mul(achElementMult()).mul(synthMult(n))
+    .mul(starBonusMult()).mul(chElemMult()).mul(chRewardMult(n));
   if (state.solarSystem) return m.mul(D(SOLAR_SYSTEM.mult));
   return m.mul(planetMult(n));
 }
@@ -354,6 +416,10 @@ function elementProdRate(n) {
     // 항성 이후: 정방향 캐스케이드 (낮은 원소 → 높은 원소). 철 수급 가능.
     if (n === 1) base = elementSeed();
     else base = state.elements[n - 2].mul(ELEM.cascade);
+  } else if (chActive() === "ch1") {
+    // 개인주의자 도전: 시드는 최상위 원소에만, 위 원소의 하향 생산 ×2.5
+    base = (n === state.researched) ? elementSeed() : D(0);
+    if (n < state.researched) base = base.add(state.elements[n].mul(ELEM.cascade * 2.5));
   } else {
     // 항성 이전: 역방향. 원자번호가 클수록 시드가 작고, 위 원소가 아래 원소를 생산.
     base = elementSeed().mul(Decimal.pow(ELEM.revDecay, n - 1));
@@ -391,7 +457,7 @@ function coreEntropyRate() {
       : Decimal.min(convRate(k), genRate(k));
     r = r.add(effective.mul(CONVERTERS[k].value).mul(compConvMult()));
   });
-  return r.mul(achEntropyMult());
+  return r.mul(achEntropyMult()).mul(chEntropyMult());
 }
 
 // 화면 표시용 초당 E (희생 복구 throttle 포함)
@@ -412,7 +478,7 @@ function tick(dt) {
   state.playtime += dt;
 
   var rec = sacRecovery();               // 희생 복구 계수 (0~1)
-  var eMult = achEntropyMult().mul(rec);  // 도전과제 × 복구
+  var eMult = achEntropyMult().mul(rec).mul(chEntropyMult());  // 도전과제 × 복구 × 도전 페널티
 
   // 1. 입자 생산
   GEN_ORDER.forEach(function (k) {
@@ -425,7 +491,7 @@ function tick(dt) {
     var amt = Decimal.min(state.particles[k], convRate(k).mul(dt)).mul(rec);
     if (amt.lte(0)) return;
     state.particles[k] = state.particles[k].sub(amt);
-    gainEntropy(amt.mul(CONVERTERS[k].value).mul(achEntropyMult()).mul(compConvMult()));
+    gainEntropy(amt.mul(CONVERTERS[k].value).mul(achEntropyMult()).mul(compConvMult()).mul(chEntropyMult()));
   });
 
   // 3. 원소 연쇄 생산 (항성 이전에는 1.8e308 상한)
@@ -468,6 +534,9 @@ function tick(dt) {
 
   // 8. 도전과제 판정
   checkAchievements();
+
+  // 9. 주기별 도전 (반물질·목표)
+  challengeTick(dt);
 }
 
 // ============================================================

@@ -161,6 +161,31 @@ var AUTOUP = {
   stepCostMult: 50
 };
 
+// ---------- 주기별 도전 (Challenge) ----------
+// 해당 주기의 모든 원소를 얻으면 열림. 진입 시 원소 진행이 리셋되고 제약이 걸림.
+// 목표(재연구 도달)를 달성하면 그 주기 원소에 영구 배율. 안 깨고 넘어가도 됨.
+var CHALLENGE_PERIODS = { 1: [1, 2], 2: [3, 10], 3: [11, 18], 4: [19, 26] };
+var CHALLENGES = [
+  { id: "ch1", period: 1, name: "개인주의자", goalResearch: 5,
+    desc: "원소가 자기 시드 없이, 오직 위 원소의 하향 생산(×2.5)만으로 만들어집니다.",
+    goalDesc: "이 상태로 붕소(B)까지 재연구", reward: "수소·헬륨 생산 ×1e4 (영구)",
+    rewardEls: [1, 2], rewardMult: "1e4" },
+  { id: "ch2", period: 2, name: "무질서", goalResearch: 10,
+    desc: "주기율표가 뒤섞여 모든 원소 생산이 ×0.05로 급감합니다.",
+    goalDesc: "이 상태로 네온(Ne)까지 재연구", reward: "리튬~네온 생산 ×1e6 (영구)",
+    rewardEls: [3, 4, 5, 6, 7, 8, 9, 10], rewardMult: "1e6" },
+  { id: "ch3", period: 3, name: "안티매터 디맨션", goalResearch: 18,
+    desc: "반물질이 매초 커집니다. 반물질이 1.8e308에 닿기 전에 아르곤(Ar)까지 재연구하세요.",
+    goalDesc: "반물질 폭주 전 아르곤(Ar) 재연구", reward: "나트륨~아르곤 생산 ×1e9 (영구)",
+    rewardEls: [11, 12, 13, 14, 15, 16, 17, 18], rewardMult: "1e9" },
+  { id: "ch4", period: 4, name: "엔트로피 고갈", goalResearch: 26,
+    desc: "초당 E 생산이 ×0.02로 고갈됩니다.",
+    goalDesc: "이 상태로 철(Fe)까지 재연구", reward: "칼륨~철 생산 ×1e12 (영구)",
+    rewardEls: [19, 20, 21, 22, 23, 24, 25, 26], rewardMult: "1e12" }
+];
+var CH_ANTIMATTER_GROW = 1.4;   // ch3: 매초 반물질 ×1.4
+var CH_ANTIMATTER_CAP = "1.8e308";
+
 // ---------- 합성 (화합물) ----------
 // 원소를 조합해 화합물을 연구/레벨업 → 구성 원소 생산에 배율.
 // 해금 조건: 구성 원소가 모두 연구됨. 비용은 구성 원소를 소모(레벨업마다 상승).

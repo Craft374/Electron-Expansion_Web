@@ -59,6 +59,8 @@ function updateNav() {
   setHidden("nav-automation", state.researched < 1);
   setHidden("nav-compression", !compressUnlocked());
   setHidden("badge-compression", !canCompress());
+  setHidden("nav-challenge", state.researched < 2 && !chActive() &&
+    !CHALLENGES.some(function (c) { return state.challenge.completed[c.id]; }));
   setHidden("nav-star", state.researched < ELEMENTS.length);
   setHidden("nav-planets", !state.star);
   var solarVisible = state.solarSystem ||
@@ -824,6 +826,56 @@ function drainAchToasts() {
 }
 
 // ============================================================
+// 주기별 도전 탭
+// ============================================================
+function chSig() {
+  return (chActive() || "-") + "|" + CHALLENGES.map(function (c) {
+    return (state.challenge.completed[c.id] ? "1" : "0") + (challengeUnlocked(c) ? "u" : "-");
+  }).join("");
+}
+function buildChallenges() {
+  var box = el("challenge-list");
+  box.innerHTML = CHALLENGES.map(function (c) {
+    var done = !!state.challenge.completed[c.id];
+    var unlocked = challengeUnlocked(c);
+    var active = chActive() === c.id;
+    var cls = "iso-card" + (done ? " owned" : "") + (active ? " ch-active" : "");
+    var btn;
+    if (active) btn = '<button class="btn danger" id="ch-btn-' + c.id + '">포기하고 나가기</button>';
+    else if (!unlocked) btn = '<div class="iso-owned-tag" style="color:var(--dim)">🔒 ' + ELEMENTS[CHALLENGE_PERIODS[c.period][1] - 1].name + '까지 필요</div>';
+    else if (done) btn = '<div class="iso-owned-tag">✓ 클리어</div>' +
+      '<button class="btn" id="ch-btn-' + c.id + '">재도전</button>';
+    else btn = '<button class="btn" id="ch-btn-' + c.id + '">도전 시작</button>';
+    return '<div class="' + cls + '">' +
+      '<div class="iso-name">' + c.period + '주기 · ' + c.name + (active ? ' <span style="color:var(--purple)">진행 중</span>' : '') + '</div>' +
+      '<div class="iso-desc">' + c.desc + '</div>' +
+      '<div class="iso-desc" style="color:var(--cyan)">목표: ' + c.goalDesc + '</div>' +
+      '<div class="iso-desc" style="color:var(--green)">보상: ' + c.reward + '</div>' +
+      (active && c.id === "ch3" ? '<div class="iso-desc">반물질: <b id="ch-am">' + '</b> / 1.8e308</div>' : '') +
+      btn + '</div>';
+  }).join("");
+  CHALLENGES.forEach(function (c) {
+    var b = el("ch-btn-" + c.id);
+    if (!b) return;
+    b.onclick = function () {
+      if (chActive() === c.id) exitChallenge(false);
+      else if (challengeUnlocked(c) && !chActive()) {
+        if (confirm("도전을 시작하면 원소 진행이 리셋됩니다. 진행할까요?")) enterChallenge(c.id);
+      }
+      updateUI();
+    };
+  });
+}
+function updateChallenges() {
+  var s = chSig();
+  if (sig.ch !== s) { buildChallenges(); sig.ch = s; }
+  el("txt-ch-active").textContent = chActive()
+    ? (findChallenge(chActive()).period + "주기 진행 중") : "";
+  var am = el("ch-am");
+  if (am) am.textContent = format(state.challenge.antimatter, 2);
+}
+
+// ============================================================
 // 합성 탭
 // ============================================================
 function synthSig() {
@@ -1027,6 +1079,7 @@ function updateUI() {
   else if (activeTab === "ach") updateAch();
   else if (activeTab === "automation") updateAuto();
   else if (activeTab === "compression") updateCompression();
+  else if (activeTab === "challenge") updateChallenges();
   else if (activeTab === "synthesis") updateSynth();
   else if (activeTab === "elements") { updateFusion(); updateResearch(); updateElemGrid(); updateSpecials(); }
   else if (activeTab === "isotopes") updateIsotopes();
