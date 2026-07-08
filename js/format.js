@@ -42,6 +42,13 @@ function formatWhole(value) {
   return format(new Decimal(value).floor(), 0);
 }
 
+// 정확한 개수 (2^53 미만에서만 정수가 정확) — 툴팁용, 너무 크면 null
+function formatExact(value) {
+  var d = new Decimal(value);
+  if (d.lt(0) || d.gte(1e15)) return null;
+  return Math.floor(d.toNumber()).toLocaleString("en-US");
+}
+
 function formatRate(value) {
   return format(value, 1) + "/초";
 }

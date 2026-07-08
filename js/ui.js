@@ -55,17 +55,79 @@ function costHTML(cost) {
 function updateNav() {
   setHidden("nav-elements", state.genLevels.neutron < 1 && state.researched < 1);
   setHidden("nav-isotopes", state.researched < 2);
+  setHidden("nav-automation", state.researched < 1);
   setHidden("nav-star", state.researched < ELEMENTS.length);
   setHidden("nav-planets", !state.star);
   var solarVisible = state.solarSystem ||
     (state.star && (solarPlanetCount() >= SOLAR_PLANETS.length || state.star.level >= STAR.solarLevel));
   setHidden("nav-solar", !solarVisible);
+
+  // 알림 배지: 연구 가능 / 동위원소 합성 가능
+  var rc = researchCost();
+  setHidden("badge-elements", !(rc && canAfford(rc)));
+  var isoReady = false;
+  ISOTOPES.forEach(function (iso) {
+    if (!state.isotopes[iso.id] && state.researched >= iso.req &&
+        canAfford({ neutron: iso.cost.neutron, entropy: D(iso.cost.entropy) })) isoReady = true;
+  });
+  setHidden("badge-isotopes", !isoReady);
+}
+
+// 지수 표기(AeB)에 마우스를 올리면 정확한 개수 표시 (너무 크면 미표시)
+function setExactTitle(elm, value, suffix) {
+  if (!elm) return;
+  var ex = formatExact(value);
+  if (ex !== null) { elm.title = ex + (suffix || ""); elm.classList.add("exact"); }
+  else { elm.title = ""; elm.classList.remove("exact"); }
 }
 
 function updateHeader() {
-  el("txt-entropy").textContent = format(state.entropy.floor());
+  var eNum = el("txt-entropy");
+  eNum.textContent = format(state.entropy.floor());
+  setExactTitle(eNum, state.entropy.floor(), " E");
   el("txt-erate").textContent = format(entropyRateDisplay(), 1);
   el("txt-goal").textContent = currentGoal();
+  updateSideRes();
+}
+
+// ----- 사이드바 상단 자원 표시 -----
+var SIDE_RES_LIST = [
+  { k: "entropy",  lb: "E",     avail: function () { return true; },
+    val: function () { return state.entropy.floor(); }, suf: " E" },
+  { k: "electron", lb: "전자",   avail: function () { return genVisible("electron"); },
+    val: function () { return state.particles.electron.floor(); }, suf: " 개" },
+  { k: "proton",   lb: "양성자", avail: function () { return genVisible("proton"); },
+    val: function () { return state.particles.proton.floor(); }, suf: " 개" },
+  { k: "neutron",  lb: "중성자", avail: function () { return genVisible("neutron"); },
+    val: function () { return state.particles.neutron.floor(); }, suf: " 개" },
+  { k: "element",  lb: "원소",   avail: function () { return state.researched >= 1; },
+    val: function () { return state.elements[state.researched - 1].floor(); }, suf: " 개",
+    lbDyn: function () { return ELEMENTS[state.researched - 1].sym; } }
+];
+
+function activeSideRes() {
+  var sr = state.settings.sideRes || { entropy: true };
+  return SIDE_RES_LIST.filter(function (o) { return sr[o.k] && o.avail(); });
+}
+
+function updateSideRes() {
+  var list = activeSideRes();
+  var s = list.map(function (o) { return o.k; }).join(",");
+  var box = el("side-res");
+  if (sig.sideRes !== s) {
+    box.innerHTML = list.map(function (o) {
+      return '<div class="sr-row' + (o.k === "entropy" ? " big" : "") + '">' +
+        '<span class="sr-lb" id="sr-lb-' + o.k + '">' + o.lb + '</span>' +
+        '<span class="sr-val" id="sr-val-' + o.k + '"></span></div>';
+    }).join("");
+    sig.sideRes = s;
+  }
+  list.forEach(function (o) {
+    var v = o.val();
+    var vEl = el("sr-val-" + o.k);
+    if (vEl) { vEl.textContent = format(v); setExactTitle(vEl, v, o.suf); }
+    if (o.lbDyn) { var lEl = el("sr-lb-" + o.k); if (lEl) lEl.textContent = o.lbDyn(); }
+  });
 }
 
 // ============================================================
@@ -111,6 +173,7 @@ function updateGens() {
     if (lv > 0) {
       el("gen-stat-" + k).innerHTML =
         "보유 <b>" + formatWhole(state.particles[k]) + "</b>개 · 초당 <b>+" + format(genRate(k), 1) + "</b>개";
+      setExactTitle(el("gen-stat-" + k), state.particles[k].floor(), " 개");
     } else {
       el("gen-stat-" + k).textContent = "미보유";
     }
@@ -158,32 +221,28 @@ function updateGens() {
     }
   });
 
-  // 자동 업그레이드 장치
-  var showAuto = state.researched >= 5 || state.autoUp.unlocked;
-  setHidden("panel-autoup", !showAuto);
-  if (showAuto) {
-    setHidden("autoup-locked", state.autoUp.unlocked);
-    setHidden("autoup-open", !state.autoUp.unlocked);
-    if (!state.autoUp.unlocked) {
-      var uc = autoUpUnlockCost();
-      el("txt-autoup-unlock-cost").innerHTML = costHTML(uc);
-      el("btn-autoup-unlock").disabled = !canAfford(uc);
-    } else {
-      el("txt-autoup-delay").textContent = autoUpDelay().toFixed(2);
-      var maxed = state.autoUp.level >= AUTOUP.steps.length - 1;
-      el("txt-autoup-lv").textContent = "(" + state.autoUp.level + " / " + (AUTOUP.steps.length - 1) + ")";
-      if (maxed) {
-        el("txt-autoup-cost").innerHTML = '<span class="cost-item ok">최대 단축 완료</span>';
-        el("btn-autoup-step").disabled = true;
-      } else {
-        var sc = autoUpStepCost();
-        el("txt-autoup-cost").innerHTML = costHTML(sc);
-        el("btn-autoup-step").disabled = !canAfford(sc);
-      }
-      var achk = el("chk-autoup");
-      if (achk.checked !== state.autoUp.on) achk.checked = state.autoUp.on;
-    }
+  // 엔트로피 희생 패널
+  updateSacrifice();
+}
+
+// ============================================================
+// 엔트로피 희생
+// ============================================================
+function updateSacrifice() {
+  var vis = sacUnlocked();
+  setHidden("panel-sacrifice", !vis);
+  if (!vis) return;
+  el("txt-sac-mult").textContent = "×" + format(sacNeutronMult(), 2);
+  var f = sacrificeGainFactor();
+  el("txt-sac-gain").textContent = "중성자 생성기 ×" + f.toFixed(4) +
+    " → 누적 ×" + format(sacNeutronMult().mul(f), 2);
+  var rec = sacRecovery();
+  if (rec >= 1) {
+    el("txt-sac-recovery").textContent = "정상";
+  } else {
+    el("txt-sac-recovery").textContent = Math.floor(rec * 100) + "% 복구 중…";
   }
+  el("btn-sacrifice").disabled = false;
 }
 
 // ============================================================
@@ -251,6 +310,7 @@ function updateElemGrid() {
   }
   for (var n = 1; n <= state.researched; n++) {
     el("elem-amt-" + n).textContent = format(state.elements[n - 1]);
+    setExactTitle(el("elem-amt-" + n), state.elements[n - 1].floor(), " 개");
     el("elem-rate-" + n).textContent = "+" + format(elementProdRate(n), 1) + "/초";
     el("elem-fu-" + n).textContent = state.fusionLevels[n - 1] > 0 ? "강화 +" + state.fusionLevels[n - 1] : "";
   }
@@ -669,19 +729,179 @@ function updateSettings() {
 }
 
 // ============================================================
+// 도전과제 탭 + 토스트
+// ============================================================
+
+function achSig() {
+  return ACHIEVEMENTS.map(function (a) { return state.achievements[a.id] ? 1 : 0; }).join("") +
+    "|" + ACH_ROWS.map(function (r) { return achRowDone(r.row) ? 1 : 0; }).join("");
+}
+
+function buildAch() {
+  var box = el("ach-rows");
+  box.innerHTML = "";
+  ACH_ROWS.forEach(function (rw) {
+    var got = achRowDone(rw.row);
+    var tiles = ACHIEVEMENTS.filter(function (a) { return a.row === rw.row; }).map(function (a) {
+      var done = !!state.achievements[a.id];
+      var effLine = a.eff && a.eff !== "효과 없음"
+        ? '<div class="tt-eff">효과: ' + a.eff + '</div>'
+        : (a.eff === "효과 없음" ? '<div class="tt-cond">효과 없음</div>' : '');
+      return '<div class="ach-tile' + (done ? " done" : "") + '">' +
+        '<div class="at-ic">' + a.icon + '</div>' +
+        '<div class="at-nm">' + a.name + '</div>' +
+        '<div class="at-tip"><div class="tt-nm">' + a.icon + ' ' + a.name + '</div>' +
+          '<div class="tt-cond">' + a.cond + '</div>' + effLine +
+          (done ? '<div class="tt-done">✓ 달성</div>' : '') + '</div></div>';
+    }).join("");
+    var block = document.createElement("div");
+    block.className = "ach-rowblock";
+    block.innerHTML =
+      '<div class="ach-rowhead"><span>' + rw.row + '줄</span>' +
+      '<span class="ach-reward' + (got ? " got" : "") + '">줄 보상: ' + rw.reward + (got ? " ✓" : "") + '</span></div>' +
+      '<div class="ach-grid">' + tiles + '</div>';
+    box.appendChild(block);
+  });
+}
+
+function updateAch() {
+  var count = 0;
+  ACHIEVEMENTS.forEach(function (a) { if (state.achievements[a.id]) count++; });
+  el("txt-ach-count").textContent = count + " / " + ACHIEVEMENTS.length;
+  var s = achSig();
+  if (sig.ach !== s) { buildAch(); sig.ach = s; }
+}
+
+function drainAchToasts() {
+  if (!achToastQueue.length) return;
+  var box = el("ach-toasts");
+  while (achToastQueue.length) {
+    var t = achToastQueue.shift();
+    var div = document.createElement("div");
+    div.className = "ach-toast";
+    div.innerHTML = '<div class="ach-ic">' + t.icon + '</div>' +
+      '<div class="ach-txt"><div class="ach-top">' + t.top + '</div>' +
+      '<div class="ach-nm">' + t.name + '</div></div>';
+    box.appendChild(div);
+    (function (d) { setTimeout(function () { d.remove(); }, 5000); })(div);
+  }
+}
+
+// ============================================================
+// 자동화 탭
+// ============================================================
+
+function autoSig() {
+  return AUTO_TARGETS.filter(autoTargetVisible).map(function (t) { return t.key; }).join(",");
+}
+
+function buildAuto() {
+  var box = el("auto-list");
+  var vis = AUTO_TARGETS.filter(autoTargetVisible);
+  box.innerHTML = vis.map(function (t) {
+    return '<div class="auto-card">' +
+      '<div class="ac-head"><span class="ac-name">' + t.name + '</span>' +
+      '<label class="switch"><input type="checkbox" id="auto-on-' + t.key + '"> 가동</label></div>' +
+      '<div class="ac-delay">딜레이 <b id="auto-delay-' + t.key + '"></b> · <span id="auto-lvtxt-' + t.key + '"></span></div>' +
+      '<div class="cost-line" id="auto-cost-' + t.key + '"></div>' +
+      '<button class="btn" id="auto-step-' + t.key + '">단축</button></div>';
+  }).join("") || '<div class="panel-sub">아직 자동화할 항목이 없습니다.</div>';
+  vis.forEach(function (t) {
+    el("auto-on-" + t.key).onchange = function () { state.autos[t.key].on = this.checked; };
+    el("auto-step-" + t.key).onclick = function () { buyAutoStep(t.key); updateUI(); };
+  });
+}
+
+function updateAuto() {
+  var s = autoSig();
+  if (sig.auto !== s) { buildAuto(); sig.auto = s; }
+  AUTO_TARGETS.filter(autoTargetVisible).forEach(function (t) {
+    var a = state.autos[t.key];
+    var d = autoDelay(a.level);
+    el("auto-delay-" + t.key).textContent = d <= 0 ? "상시(0초)" : d.toFixed(2) + "초";
+    el("auto-lvtxt-" + t.key).textContent = "단축 " + a.level + " / " + AUTO_MAX_LEVEL;
+    var stepEl = el("auto-step-" + t.key), costEl = el("auto-cost-" + t.key);
+    if (a.level >= AUTO_MAX_LEVEL) {
+      costEl.innerHTML = '<span class="cost-item ok">최대 단축 (상시)</span>';
+      stepEl.disabled = true;
+    } else {
+      var c = autoStepCost(a.level);
+      costEl.innerHTML = costHTML(c);
+      stepEl.disabled = !canAfford(c);
+    }
+    var chk = el("auto-on-" + t.key);
+    if (chk.checked !== a.on) chk.checked = a.on;
+  });
+}
+
+// ============================================================
+// 도움말 (스포일러 방지 — 현재 가능한 것만)
+// ============================================================
+function updateHelp() {
+  var p = [];
+  p.push('<p><b>◉ 엔트로피 (E)</b> — 기본 화폐입니다. 입자는 <b>변환기</b>를 거쳐야 E가 됩니다 (전자 1 · 양성자 10 · 중성자 100). 처음엔 수동 변환 버튼으로 시작하세요.</p>');
+  p.push('<p><b>입자 생성기</b> — 전자 생성기는 무료입니다. 전자를 변환해 E를 모으면 양성자·중성자가 순서대로 해금됩니다. 변환기는 체크박스로 끄고 켤 수 있습니다.</p>');
+  if (genVisible("neutron")) {
+    p.push('<p><b>중성자</b> — 중성자는 연구·동위원소의 재료이기도 합니다. 변환기를 꺼서 중성자를 모아두는 판단이 중요합니다.</p>');
+  }
+  p.push('<p><b>★ 도전과제</b> — 조건을 만족하면 자동으로 달성되고, 우측 상단에 알림이 뜹니다. 한 줄을 모두 채우면 줄 보상을 받습니다.</p>');
+  if (state.researched >= 1) {
+    p.push('<p><b>⬡ 원소</b> — 수소부터 순서대로 연구합니다. 원소는 이전 원소로부터 자동 생산되고 보유량만큼 E를 만듭니다. 업그레이드: 융합 강화, 엔트로피 응축, 수소 선속, 입자 가속. 새 원소를 연구하면 업그레이드 상한이 풀립니다.</p>');
+    p.push('<p><b>⟳ 자동화</b> — 생성기·변환기·원소 업그레이드를 자동 구매합니다. 딜레이를 단축할수록 자주 구매하며, 끝까지 단축하면 상시(0초) 구매가 됩니다.</p>');
+  }
+  if (state.researched >= 2) {
+    p.push('<p><b>⧉ 동위원소</b> — 중성자를 소모해 합성하는 보조 아이템입니다. 할인·오프라인 확장·자동화 강화 등 다양한 도움을 줍니다.</p>');
+  }
+  if (sacUnlocked()) {
+    p.push('<p><b>엔트로피 희생</b> — 현재 초당 E를 잠시 0으로 되돌리는 대신, 중성자 생성기에 영구 배율을 얻습니다. 중성자 생산이 느릴 때 유용합니다.</p>');
+  }
+  if (state.researched >= ELEMENTS.length) {
+    p.push('<p><b>✦ 항성</b> — 철을 임계질량까지 모으면 항성이 점화됩니다. 항성은 E 생산을 크게 증폭하고 원소를 직접 만들어냅니다. 온도에 따라 강해지는 원소가 달라집니다.</p>');
+  }
+  if (state.star) {
+    p.push('<p><b>◍ 행성</b> — 랜덤 → 태양계 → 커스텀 → 특이 행성 순으로 확장됩니다. 특이 행성은 청사진을 해독하기 전까진 정체를 알 수 없습니다.</p>');
+  }
+  p.push('<p><b>오프라인</b> — 게임을 꺼둔 동안에도 일정 시간까지 진행됩니다. 설정에서 최대 틱을 조절할 수 있습니다.</p>');
+  el("help-text").innerHTML = p.join("");
+}
+
+function buildSideResOpts() {
+  var box = el("side-res-opts");
+  if (!box || box.dataset.built) return;
+  box.innerHTML = SIDE_RES_LIST.map(function (o) {
+    return '<label class="check"><input type="checkbox" data-sr="' + o.k + '"> ' +
+      (o.k === "element" ? "최신 원소" : o.lb) + '</label>';
+  }).join("");
+  box.querySelectorAll("[data-sr]").forEach(function (inp) {
+    var k = inp.dataset.sr;
+    inp.checked = !!(state.settings.sideRes && state.settings.sideRes[k]);
+    inp.onchange = function () {
+      if (!state.settings.sideRes) state.settings.sideRes = {};
+      state.settings.sideRes[k] = this.checked;
+      updateSideRes();
+    };
+  });
+  box.dataset.built = "1";
+}
+
+// ============================================================
 // 전체 갱신
 // ============================================================
 
 function updateUI() {
   updateNav();
   updateHeader();
+  drainAchToasts();
   if (activeTab === "main") updateGens();
+  else if (activeTab === "ach") updateAch();
+  else if (activeTab === "automation") updateAuto();
   else if (activeTab === "elements") { updateFusion(); updateResearch(); updateElemGrid(); updateSpecials(); }
   else if (activeTab === "isotopes") updateIsotopes();
   else if (activeTab === "star") updateStar();
   else if (activeTab === "planets") updatePlanets();
   else if (activeTab === "solar") updateSolar();
   else if (activeTab === "settings") updateSettings();
+  else if (activeTab === "help") updateHelp();
 }
 
 // ============================================================
@@ -726,10 +946,13 @@ function initUI() {
 
   el("btn-maxbuy").onclick = function () { maxBuyAll(); updateUI(); };
 
-  // 자동 업그레이드
-  el("btn-autoup-unlock").onclick = function () { unlockAutoUp(); updateUI(); };
-  el("btn-autoup-step").onclick = function () { buyAutoUpStep(); updateUI(); };
-  el("chk-autoup").onchange = function () { state.autoUp.on = this.checked; };
+  // 엔트로피 희생
+  el("btn-sacrifice").onclick = function () {
+    if (doSacrifice()) updateUI();
+  };
+
+  // 설정: 사이드바 표시 옵션
+  buildSideResOpts();
 
   // 원소
   el("btn-fusion").onclick = function () { buyFusion(); updateUI(); };

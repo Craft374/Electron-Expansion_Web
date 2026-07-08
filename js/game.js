@@ -17,7 +17,15 @@ function freshState() {
     special: {},                                           // 특수 연구 (1회성)
     isotopes: {},
     autoFusion: false,
-    autoUp: { unlocked: false, level: 0, on: true, timer: 0 },
+    autoUp: { unlocked: false, level: 0, on: true, timer: 0 },  // (구버전 호환용, 미사용)
+    achievements: {},
+    achRows: {},
+    sacrifice: { mult: D(1), recovery: 1 },
+    autos: (function () {
+      var o = {};
+      AUTO_TARGETS.forEach(function (t) { o[t.key] = { on: false, level: 0, timer: 0 }; });
+      return o;
+    })(),
     star: null,
     planets: { random: [], custom: [], special: {}, blueprints: {}, solar: {} },
     planetResearched: false,
@@ -27,7 +35,8 @@ function freshState() {
       offlineMaxTicks: SYSTEM.offlineMaxTicks,
       autosave: true,
       devMode: false,
-      gameSpeed: 1
+      gameSpeed: 1,
+      sideRes: { entropy: true, electron: false, proton: false, neutron: false, element: false }
     },
     playtime: 0,
     lastTick: Date.now()
@@ -60,6 +69,57 @@ function fusionNextTarget() {
 }
 
 function isGasElement(n) { return GAS_SET.indexOf(n) >= 0; }
+
+// ============================================================
+// 도전과제 · 희생 배율
+// ============================================================
+
+function achDone(id) { return !!state.achievements[id]; }
+
+function achRowDone(row) {
+  for (var i = 0; i < ACHIEVEMENTS.length; i++) {
+    if (ACHIEVEMENTS[i].row === row && !state.achievements[ACHIEVEMENTS[i].id]) return false;
+  }
+  return true;
+}
+
+// 입자 생산에 곱해지는 도전과제 배율 (개별 + B줄 보상)
+function achParticleMult(key) {
+  var m = 1;
+  if (key === "electron" && achDone("b2")) m *= 1.05;
+  if (key === "proton" && achDone("b3")) m *= 1.05;
+  if (key === "neutron" && achDone("b5")) m *= 1.05;
+  if (achRowDone("B")) m *= 1.1;
+  return m;
+}
+
+// E 생산에 곱해지는 도전과제 배율 (A줄 보상)
+function achEntropyMult() {
+  return achRowDone("A") ? D(1.05) : D(1);
+}
+
+// 희생: 생산 복구 계수 (0~1)
+function sacRecovery() {
+  return state.sacrifice ? state.sacrifice.recovery : 1;
+}
+function sacNeutronMult() {
+  return state.sacrifice ? D(state.sacrifice.mult) : D(1);
+}
+function sacUnlocked() { return state.researched >= SACRIFICE.reqResearched; }
+
+// 지금 희생하면 붙을 배율 (현재 초당 E 규모 기반, 매우 약함)
+function sacrificeGainFactor() {
+  var esec = coreEntropyRate();  // 복구 throttle 미포함
+  var l = Math.max(0, Decimal.log10(esec.add(10)));
+  return 1 + l * SACRIFICE.gainCoef;
+}
+
+function doSacrifice() {
+  if (!sacUnlocked()) return false;
+  state.sacrifice.mult = D(state.sacrifice.mult).mul(sacrificeGainFactor());
+  state.sacrifice.recovery = 0;
+  return true;
+}
 
 // 항성 온도 상한 (KELT-9b 보유 시 확장)
 function starTempMax() {
@@ -147,6 +207,8 @@ function genRate(key) {
   r = r.mul(Decimal.pow(TRACKS.accel.effect, state.tracks.accel));
   if (key === "electron" && state.special.degeneracy) r = r.mul(10);
   if (key === "neutron" && state.special.nstar) r = r.mul(10);
+  r = r.mul(achParticleMult(key));
+  if (key === "neutron") r = r.mul(sacNeutronMult());
   return r;
 }
 
@@ -186,8 +248,8 @@ function elementEntropyRate() {
   return r;
 }
 
-// 화면 표시용 초당 E (변환기 처리량 포함)
-function entropyRateDisplay() {
+// 초당 E 기본값 (원소 E + 변환기 처리량) × 도전과제 배율 — 희생 복구 throttle 미포함
+function coreEntropyRate() {
   var r = elementEntropyRate();
   GEN_ORDER.forEach(function (k) {
     if (state.convLevels[k] < 1 || !state.convOn[k]) return;
@@ -196,7 +258,12 @@ function entropyRateDisplay() {
       : Decimal.min(convRate(k), genRate(k));
     r = r.add(effective.mul(CONVERTERS[k].value));
   });
-  return r;
+  return r.mul(achEntropyMult());
+}
+
+// 화면 표시용 초당 E (희생 복구 throttle 포함)
+function entropyRateDisplay() {
+  return coreEntropyRate().mul(sacRecovery());
 }
 
 function gainEntropy(amount) {
@@ -211,18 +278,21 @@ function gainEntropy(amount) {
 function tick(dt) {
   state.playtime += dt;
 
+  var rec = sacRecovery();               // 희생 복구 계수 (0~1)
+  var eMult = achEntropyMult().mul(rec);  // 도전과제 × 복구
+
   // 1. 입자 생산
   GEN_ORDER.forEach(function (k) {
     state.particles[k] = state.particles[k].add(genRate(k).mul(dt));
   });
 
-  // 2. 자동 변환 (입자 → E)
+  // 2. 자동 변환 (입자 → E) — 희생 복구 동안 처리량이 줄어 입자가 쌓임
   GEN_ORDER.forEach(function (k) {
     if (state.convLevels[k] < 1 || !state.convOn[k]) return;
-    var amt = Decimal.min(state.particles[k], convRate(k).mul(dt));
+    var amt = Decimal.min(state.particles[k], convRate(k).mul(dt)).mul(rec);
     if (amt.lte(0)) return;
     state.particles[k] = state.particles[k].sub(amt);
-    gainEntropy(amt.mul(CONVERTERS[k].value));
+    gainEntropy(amt.mul(CONVERTERS[k].value).mul(achEntropyMult()));
   });
 
   // 3. 원소 연쇄 생산
@@ -233,26 +303,69 @@ function tick(dt) {
   }
 
   // 4. 원소의 E 생산
-  gainEntropy(elementEntropyRate().mul(dt));
+  gainEntropy(elementEntropyRate().mul(dt).mul(eMult));
 
-  // 5. 생성기 자동 업그레이드
-  if (state.autoUp.unlocked && state.autoUp.on) {
-    state.autoUp.timer += dt;
-    var delay = autoUpDelay();
-    var guard = 0;
-    while (state.autoUp.timer >= delay && guard++ < 50) {
-      state.autoUp.timer -= delay;
-      if (!autoUpBuyOne()) { state.autoUp.timer = 0; break; }
-    }
+  // 5. 희생 생산 복구 (0 → 1)
+  if (rec < 1) {
+    state.sacrifice.recovery = Math.min(1, rec + dt / SACRIFICE.recoverySeconds);
   }
 
-  // 6. 융합 강화 자동 구매
+  // 6. 자동화 장치
+  AUTO_TARGETS.forEach(function (t) {
+    var a = state.autos[t.key];
+    if (!a || !a.on) return;
+    var delay = autoDelay(a.level);
+    if (delay <= 0) {
+      var g = 0;
+      while (g++ < 200 && autoBuyTarget(t)) { /* 상시 구매 */ }
+    } else {
+      a.timer += dt;
+      var guard = 0;
+      while (a.timer >= delay && guard++ < 100) {
+        a.timer -= delay;
+        if (!autoBuyTarget(t)) { a.timer = 0; break; }
+      }
+    }
+  });
+
+  // 7. 융합 강화 자동 구매 (탄소-14 동위원소)
   if (state.autoFusion && state.isotopes.c14) buyFusionMax();
+
+  // 8. 도전과제 판정
+  checkAchievements();
+}
+
+// ============================================================
+// 도전과제 판정 (틱마다 호출, 신규 달성 감지)
+// ============================================================
+var achSilent = false;          // 오프라인 시뮬레이션 중 토스트 억제
+var achToastQueue = [];         // {name, icon} — ui.js가 소비
+
+function checkAchievements() {
+  for (var i = 0; i < ACHIEVEMENTS.length; i++) {
+    var a = ACHIEVEMENTS[i];
+    if (state.achievements[a.id]) continue;
+    if (a.check()) {
+      state.achievements[a.id] = true;
+      if (a.grant) gainEntropy(a.grant);
+      if (!achSilent) achToastQueue.push({ icon: a.icon, name: a.name, top: "도전과제 달성" });
+    }
+  }
+  // 줄 보상
+  for (var r = 0; r < ACH_ROWS.length; r++) {
+    var row = ACH_ROWS[r].row;
+    if (!state.achRows[row] && achRowDone(row)) {
+      state.achRows[row] = true;
+      if (!achSilent) achToastQueue.push({ icon: "🏅", name: ACH_ROWS[r].reward, top: row + "줄 완성 보상" });
+    }
+  }
 }
 
 function simulateOffline(seconds) {
   var chunks = 200;
+  achSilent = true;
   for (var i = 0; i < chunks; i++) tick(seconds / chunks);
+  achSilent = false;
 }
 
 function offlineMaxTicks() {
@@ -461,58 +574,46 @@ function buySpecial(id) {
 }
 
 // ============================================================
-// 생성기 자동 업그레이드
+// 자동화 (항목별 자동 구매)
 // ============================================================
 
-function autoUpDelay() {
-  var d = AUTOUP.steps[state.autoUp.level];
+var AUTO_MAX_LEVEL = AUTO_DELAYS.length - 1;
+
+function autoDelay(level) {
+  var d = AUTO_DELAYS[Math.min(level, AUTO_MAX_LEVEL)];
   if (state.isotopes.al26) d *= 0.8;
   return d;
 }
 
-function autoUpUnlockCost() {
+// 단축 비용: 레벨이 오를수록 더 무거운 원소가 필요 (끝까지 = 철)
+function autoStepCost(level) {
+  var e = Math.min(26, Math.max(1, 1 + Math.floor(level * 25 / AUTO_MAX_LEVEL)));
+  var amt = D(ELEM_SCALE[e - 1]).mul(AUTO_STEP_BASE_FRAC).mul(Decimal.pow(AUTO_STEP_GROW, level));
   var cost = { elements: {} };
-  for (var n in AUTOUP.unlockCost) cost.elements[n] = D(AUTOUP.unlockCost[n]);
+  cost.elements[e] = amt;
   return cost;
 }
 
-function unlockAutoUp() {
-  if (state.autoUp.unlocked) return false;
-  if (pay(autoUpUnlockCost())) { state.autoUp.unlocked = true; return true; }
+function buyAutoStep(key) {
+  var a = state.autos[key];
+  if (!a || a.level >= AUTO_MAX_LEVEL) return false;
+  if (pay(autoStepCost(a.level))) { a.level++; return true; }
   return false;
 }
 
-function autoUpStepCost() {
-  var cost = { elements: {} };
-  cost.elements[AUTOUP.stepCostElem] =
-    D(AUTOUP.stepCostBase).mul(Decimal.pow(AUTOUP.stepCostMult, state.autoUp.level));
-  return cost;
-}
-
-function buyAutoUpStep() {
-  if (state.autoUp.level >= AUTOUP.steps.length - 1) return false;
-  if (pay(autoUpStepCost())) { state.autoUp.level++; return true; }
+function autoBuyTarget(t) {
+  if (t.kind === "gen") return buyGenerator(t.p);
+  if (t.kind === "conv") return buyConverter(t.p);
+  if (t.kind === "fusion") return buyFusion();
+  if (t.kind === "track") return buyTrack(t.t);
   return false;
 }
 
-// 보유 중인 생성기/변환기 중 제일 싼 레벨 1개 자동 구매
-function autoUpBuyOne() {
-  var best = null, bestCost = null;
-  GEN_ORDER.forEach(function (k) {
-    if (state.genLevels[k] >= 1) {
-      var c = genCost(k).entropy;
-      if (state.entropy.gte(c) && (bestCost === null || c.lt(bestCost))) {
-        bestCost = c; best = function () { return buyGenerator(k); };
-      }
-    }
-    if (state.convLevels[k] >= 1) {
-      var c2 = convCost(k).entropy;
-      if (state.entropy.gte(c2) && (bestCost === null || c2.lt(bestCost))) {
-        bestCost = c2; best = function () { return buyConverter(k); };
-      }
-    }
-  });
-  return best ? best() : false;
+function autoTargetVisible(t) {
+  if (t.kind === "gen") return genVisible(t.p);
+  if (t.kind === "conv") return convVisible(t.p);
+  if (t.kind === "fusion" || t.kind === "track") return state.researched >= 1;
+  return false;
 }
 
 // ============================================================

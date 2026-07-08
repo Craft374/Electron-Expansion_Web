@@ -306,6 +306,92 @@ var SOLAR_PLANETS = [
 // ---------- 태양계 ----------
 var SOLAR_SYSTEM = { mult: "2e7" };
 
+// ---------- 도전과제 (업적) ----------
+// row: 줄 구분(A/B). 한 줄을 모두 채우면 줄 보상.
+// eff: 개별 달성 효과(생산 배율). check: 달성 조건 (런타임에 game.js 함수 참조).
+var ACHIEVEMENTS = [
+  { id: "a1", row: "A", name: "시작이 반이다!", icon: "🌱", cond: "첫 전자 생성기를 구매하세요.",
+    eff: "효과 없음", check: function () { return state.genLevels.electron >= 1; } },
+  { id: "a2", row: "A", name: "양성자 이몸 등장", icon: "🔴", cond: "양성자 생성기를 구매하세요.",
+    eff: "", check: function () { return state.genLevels.proton >= 1; } },
+  { id: "a3", row: "A", name: "주인공은 맨 마지막에", icon: "⚪", cond: "중성자 생성기를 구매하세요.",
+    eff: "", check: function () { return state.genLevels.neutron >= 1; } },
+  { id: "a4", row: "A", name: "돈 만이 벌고 싶다", icon: "💰", cond: "누적 10,002 E를 얻으세요.",
+    eff: "즉시 10,002 E 지급", grant: 10002, check: function () { return state.totalEntropy.gte(10002); } },
+  { id: "a5", row: "A", name: "빠른", icon: "💨", cond: "초당 1,000 E 이상 획득하세요.",
+    eff: "", check: function () { return entropyRateDisplay().gte(1000); } },
+  { id: "a6", row: "A", name: "원소다!", icon: "⚛️", cond: "수소를 연구하세요.",
+    eff: "", check: function () { return state.researched >= 1; } },
+  { id: "a7", row: "A", name: "이것도 수소인가?", icon: "💧", cond: "중수소를 합성하세요.",
+    eff: "", check: function () { return !!state.isotopes.h2; } },
+  { id: "a8", row: "A", name: "새로운 업그레이드", icon: "🔧", cond: "융합 강화를 구매하세요.",
+    eff: "", check: function () { return fusionTotalLevel() >= 1; } },
+  { id: "a9", row: "A", name: "풍선", icon: "🎈", cond: "헬륨을 연구하세요.",
+    eff: "", check: function () { return state.researched >= 2; } },
+  { id: "a10", row: "A", name: "진짜 빠른!", icon: "🚀", cond: "초당 2.5e5 E 이상 획득하세요.",
+    eff: "", check: function () { return entropyRateDisplay().gte(2.5e5); } },
+
+  { id: "b1", row: "B", name: "전자가 부족해!", icon: "⚡", cond: "전자 변환속도가 생산속도보다 빠르게 하세요.",
+    eff: "", check: function () { return state.convLevels.electron >= 1 && convRate("electron").gt(genRate("electron")); } },
+  { id: "b2", row: "B", name: "실버튄버", icon: "🥈", cond: "전자·양성자·중성자를 각 1e6개 이상 보유하세요.",
+    eff: "전자 생산 ×1.05", check: function () {
+      return state.particles.electron.gte(1e6) && state.particles.proton.gte(1e6) && state.particles.neutron.gte(1e6);
+    } },
+  { id: "b3", row: "B", name: "배터리", icon: "🔋", cond: "리튬을 연구하세요.",
+    eff: "양성자 생산 ×1.05", check: function () { return state.researched >= 3; } },
+  { id: "b4", row: "B", name: "헬륨친구", icon: "🫧", cond: "헬륨-3를 합성하세요.",
+    eff: "", check: function () { return !!state.isotopes.he3; } },
+  { id: "b5", row: "B", name: "단맛", icon: "🍬", cond: "베릴륨을 연구하세요.",
+    eff: "중성자 생산 ×1.05", check: function () { return state.researched >= 4; } },
+  { id: "b6", row: "B", name: "붕소3", icon: "🧪", cond: "붕소를 연구하세요.",
+    eff: "", check: function () { return state.researched >= 5; } },
+  { id: "b7", row: "B", name: "반백", icon: "🎂", cond: "전자 생성기를 50개 이상 보유하세요.",
+    eff: "", check: function () { return state.genLevels.electron >= 50; } },
+  { id: "b8", row: "B", name: "이런 C..", icon: "⚫", cond: "탄소를 연구하세요.",
+    eff: "", check: function () { return state.researched >= 6; } },
+  { id: "b9", row: "B", name: "과자봉지", icon: "🍿", cond: "질소를 연구하세요.",
+    eff: "", check: function () { return state.researched >= 7; } }
+];
+
+// 줄 보상: 한 줄 전부 달성 시
+var ACH_ROWS = [
+  { row: "A", reward: "초당 E 생산 ×1.05" },
+  { row: "B", reward: "모든 입자 생산 ×1.1" }
+];
+
+// ---------- 엔트로피 희생 ----------
+var SACRIFICE = {
+  reqResearched: 5,       // 붕소 이후
+  recoverySeconds: 30,    // 생산이 0 → 원상복구까지
+  gainCoef: 0.005         // 배율 획득 계수 (매우 약함 — 초당 E log10에 비례)
+};
+
+// ---------- 자동화 ----------
+var AUTO_TARGETS = [
+  { key: "gen_electron",  name: "전자 생성기 자동",   kind: "gen",   p: "electron" },
+  { key: "gen_proton",    name: "양성자 생성기 자동", kind: "gen",   p: "proton" },
+  { key: "gen_neutron",   name: "중성자 생성기 자동", kind: "gen",   p: "neutron" },
+  { key: "conv_electron", name: "전자 변환기 자동",   kind: "conv",  p: "electron" },
+  { key: "conv_proton",   name: "양성자 변환기 자동", kind: "conv",  p: "proton" },
+  { key: "conv_neutron",  name: "중성자 변환기 자동", kind: "conv",  p: "neutron" },
+  { key: "fusion",        name: "융합 강화 자동",     kind: "fusion" },
+  { key: "track_condense",name: "엔트로피 응축 자동", kind: "track", t: "condense" },
+  { key: "track_hflux",   name: "수소 선속 자동",     kind: "track", t: "hflux" },
+  { key: "track_accel",   name: "입자 가속 자동",     kind: "track", t: "accel" }
+];
+
+// 딜레이 스케줄: 600s → 30s씩 → 60s부터 5s씩 → 10s부터 1s씩 → 0s(상시)
+var AUTO_DELAYS = (function () {
+  var a = [], d;
+  for (d = 600; d > 60; d -= 30) a.push(d);
+  for (d = 60; d > 10; d -= 5) a.push(d);
+  for (d = 10; d > 0; d -= 1) a.push(d);
+  a.push(0);
+  return a;
+})();
+var AUTO_STEP_BASE_FRAC = 0.001;   // 원소 자연보유량 대비 첫 단계 비용 비율
+var AUTO_STEP_GROW = 1.15;
+
 // ---------- 시스템 ----------
 var SYSTEM = {
   tickSeconds: 0.05,

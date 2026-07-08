@@ -27,6 +27,10 @@ function saveToString() {
     isotopes: s.isotopes,
     autoFusion: s.autoFusion,
     autoUp: s.autoUp,
+    achievements: s.achievements,
+    achRows: s.achRows,
+    sacrifice: { mult: s.sacrifice.mult.toString(), recovery: s.sacrifice.recovery },
+    autos: s.autos,
     star: s.star,
     planets: s.planets,
     planetResearched: s.planetResearched,
@@ -66,6 +70,17 @@ function loadFromString(str) {
   if (obj.isotopes) s.isotopes = obj.isotopes;
   if (typeof obj.autoFusion === "boolean") s.autoFusion = obj.autoFusion;
   if (obj.autoUp) Object.assign(s.autoUp, obj.autoUp);
+  if (obj.achievements) s.achievements = obj.achievements;
+  if (obj.achRows) s.achRows = obj.achRows;
+  if (obj.sacrifice) {
+    if (obj.sacrifice.mult) s.sacrifice.mult = D(obj.sacrifice.mult);
+    if (typeof obj.sacrifice.recovery === "number") s.sacrifice.recovery = obj.sacrifice.recovery;
+  }
+  if (obj.autos) {
+    for (var ak in obj.autos) {
+      if (s.autos[ak]) Object.assign(s.autos[ak], obj.autos[ak]);
+    }
+  }
   if (obj.star) s.star = obj.star;
   if (obj.planets) {
     s.planets.random = obj.planets.random || [];
@@ -94,6 +109,11 @@ function loadGame() {
   if (!str) return 0;
   try { loadFromString(str); }
   catch (e) { console.error("불러오기 실패:", e); return 0; }
+
+  // 이미 만족한 도전과제는 토스트 없이 표시 (기존 저장 마이그레이션)
+  achSilent = true;
+  checkAchievements();
+  achSilent = false;
 
   var offlineSec = (Date.now() - state.lastTick) / 1000;
   var maxSec = offlineMaxTicks() * SYSTEM.tickSeconds;

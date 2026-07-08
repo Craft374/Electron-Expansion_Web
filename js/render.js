@@ -134,7 +134,9 @@ function drawStar(cv, temp, level, t) {
   var w = cv.width, h = cv.height;
   ctx.clearRect(0, 0, w, h);
   var cx = w / 2, cy = h / 2;
-  var R = Math.min(w, h) * (0.3 + Math.min(0.04, level / 9000)) *
+  // 반경은 코로나(≈R*2.1)까지 캔버스 안에 들어오도록 여유를 둔다 (빛 잘림 방지)
+  var maxR = Math.min(cx, cy) / 2.15;
+  var R = Math.min(maxR, Math.min(w, h) * (0.22 + Math.min(0.03, level / 12000))) *
           (1 + 0.008 * Math.sin(t * 1.3) + 0.004 * Math.sin(t * 3.1));
 
   // 온도 버킷 (틴트 캐시 효율) — 사진 느낌을 위해 색은 실제보다 따뜻하게 보정

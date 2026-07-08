@@ -13,25 +13,39 @@
     <button onclick="this.parentElement.classList.add('hidden')">확인</button>
   </div>
 
+  <div id="ach-toasts"></div>
+
   <div id="app">
 
     <!-- ===== 사이드바 ===== -->
     <aside id="sidebar">
       <div id="logo">
-        <div class="logo-mark"><span>e⁻</span></div>
+        <div class="logo-mark">
+          <svg viewBox="0 0 40 40" class="logo-svg" aria-hidden="true">
+            <ellipse cx="20" cy="20" rx="16" ry="6.5" transform="rotate(30 20 20)"/>
+            <ellipse cx="20" cy="20" rx="16" ry="6.5" transform="rotate(-30 20 20)"/>
+            <circle class="logo-nucleus" cx="20" cy="20" r="4"/>
+            <circle class="logo-e" cx="33" cy="13.5" r="2.4"/>
+          </svg>
+        </div>
         <div class="logo-name">Electron<br>Expansion</div>
       </div>
+
+      <div id="side-res"></div>
+
       <nav id="side-nav">
         <button class="side-btn active" data-tab="main"><span class="ic">◉</span><span class="lb">엔트로피</span></button>
-        <button class="side-btn hidden" data-tab="elements" id="nav-elements"><span class="ic">⬡</span><span class="lb">원소</span></button>
-        <button class="side-btn hidden" data-tab="isotopes" id="nav-isotopes"><span class="ic">⧉</span><span class="lb">동위원소</span></button>
+        <button class="side-btn" data-tab="ach" id="nav-ach"><span class="ic">★</span><span class="lb">도전과제</span><span class="nav-badge hidden" id="badge-ach"></span></button>
+        <button class="side-btn hidden" data-tab="elements" id="nav-elements"><span class="ic">⬡</span><span class="lb">원소</span><span class="nav-badge hidden" id="badge-elements"></span></button>
+        <button class="side-btn hidden" data-tab="isotopes" id="nav-isotopes"><span class="ic">⧉</span><span class="lb">동위원소</span><span class="nav-badge hidden" id="badge-isotopes"></span></button>
+        <button class="side-btn hidden" data-tab="automation" id="nav-automation"><span class="ic">⟳</span><span class="lb">자동화</span></button>
         <button class="side-btn hidden" data-tab="star" id="nav-star"><span class="ic">✦</span><span class="lb">항성</span></button>
         <button class="side-btn hidden" data-tab="planets" id="nav-planets"><span class="ic">◍</span><span class="lb">행성</span></button>
         <button class="side-btn hidden" data-tab="solar" id="nav-solar"><span class="ic">☉</span><span class="lb">태양계</span></button>
         <button class="side-btn" data-tab="settings"><span class="ic">⚙</span><span class="lb">설정</span></button>
         <button class="side-btn" data-tab="help"><span class="ic">?</span><span class="lb">도움말</span></button>
       </nav>
-      <div id="version">v2.1.0</div>
+      <div id="version">v2.2.0</div>
     </aside>
 
     <!-- ===== 메인 ===== -->
@@ -58,21 +72,31 @@
           <div id="gen-list"></div>
         </div>
 
-        <div class="panel hidden" id="panel-autoup">
-          <div class="panel-head"><span class="dots"></span>자동 업그레이드 장치</div>
-          <div id="autoup-locked">
-            <div class="panel-sub">일정 시간마다 생성기·변환기 중 제일 싼 레벨을 자동으로 구매하는 장치입니다.</div>
-            <div class="cost-line" id="txt-autoup-unlock-cost"></div>
-            <button class="btn" id="btn-autoup-unlock">장치 조립</button>
-          </div>
-          <div id="autoup-open" class="hidden">
-            <div class="kv">현재 딜레이: <span id="txt-autoup-delay"></span>초마다 1개 구매</div>
-            <label class="check"><input type="checkbox" id="chk-autoup"> 가동</label>
-            <div class="divider"></div>
-            <div class="kv">딜레이 단축 <span id="txt-autoup-lv"></span></div>
-            <div class="cost-line" id="txt-autoup-cost"></div>
-            <button class="btn" id="btn-autoup-step">단축</button>
-          </div>
+        <div class="panel purple hidden" id="panel-sacrifice">
+          <div class="panel-head"><span class="dots purple"></span>엔트로피 희생</div>
+          <div class="panel-sub">현재 초당 E를 잠시 <b>0</b>으로 되돌리는 대신, 그 규모에 비례해 <b>중성자 생성기</b>에 영구 배율을 얻습니다. 생산은 서서히 원상 복구됩니다. (붕소 이후)</div>
+          <div class="kv">중성자 생성기 희생 배율: <span id="txt-sac-mult"></span></div>
+          <div class="kv">지금 희생하면: <span id="txt-sac-gain"></span></div>
+          <div class="kv" id="sac-recovery-line">생산 복구: <span id="txt-sac-recovery"></span></div>
+          <button class="btn big-purple" id="btn-sacrifice">✦ 희생</button>
+        </div>
+      </section>
+
+      <!-- 도전과제 -->
+      <section id="tab-ach" class="tab-page hidden">
+        <div class="panel">
+          <div class="panel-head"><span class="dots"></span>도전과제 <span class="head-tag" id="txt-ach-count"></span></div>
+          <div class="panel-sub">조건을 만족하면 자동으로 달성됩니다. 한 줄을 모두 채우면 <b>줄 보상</b>을 받습니다. 타일에 마우스를 올리면 상세가 표시됩니다.</div>
+          <div id="ach-rows"></div>
+        </div>
+      </section>
+
+      <!-- 자동화 -->
+      <section id="tab-automation" class="tab-page hidden">
+        <div class="panel">
+          <div class="panel-head"><span class="dots"></span>자동화 장치</div>
+          <div class="panel-sub">생성기·변환기·원소 업그레이드를 자동으로 구매합니다. 각 항목마다 딜레이를 단축할 수 있고(최소 0초 = 상시), 개별로 껐다 켤 수 있습니다. 단축 비용은 원소로 지불하며, 끝까지 단축하려면 무거운 원소가 필요합니다.</div>
+          <div id="auto-list"></div>
         </div>
       </section>
 
@@ -283,6 +307,9 @@
             <div class="panel-head"><span class="dots"></span>표시</div>
             <label class="check"><input type="checkbox" id="chk-kmb"> K,M,B 표기 사용</label>
             <div class="divider"></div>
+            <div class="kv">사이드바 상단에 표시할 자원</div>
+            <div id="side-res-opts" class="side-res-opts"></div>
+            <div class="divider"></div>
             <div class="kv">오프라인 최대 틱 (1틱 = 0.05초)</div>
             <div class="btn-row">
               <input type="number" id="inp-offline" min="1000" step="1000">
@@ -319,16 +346,8 @@
       <section id="tab-help" class="tab-page hidden">
         <div class="panel">
           <div class="panel-head"><span class="dots"></span>도움말</div>
-          <div class="help-text">
-            <p><b>◉ 엔트로피 (E)</b> — 기본 화폐. 입자는 <b>변환기</b>를 거쳐야 E가 됩니다 (전자 1 E · 양성자 10 E · 중성자 100 E). 처음엔 수동 변환 버튼으로, 이후엔 자동 변환기로.</p>
-            <p><b>입자</b> — 전자 생성기는 무료. 전자 → 양성자 → 중성자 순서로 해금됩니다. 변환기는 입자별로 따로 사야 하고, 체크박스로 끄고 켤 수 있습니다. <b>중성자는 연구·동위원소 재료이기도 하니 변환기를 꺼서 모아두는 판단이 중요합니다.</b></p>
-            <p><b>⬡ 원소</b> — 수소부터 철까지 순서대로 연구. 원소는 이전 원소로부터 자동 융합 생산되고 보유량만큼 E를 만듭니다. 업그레이드는 4종: <b>융합 강화</b>(원소 순환 ×1.5), <b>엔트로피 응축</b>(E ×1.25), <b>수소 선속</b>(수소 ×1.3), <b>입자 가속</b>(입자 ×1.5). 새 원소를 연구하면 상한이 풀립니다. <b>특수 연구</b>는 원소를 소모하는 강력한 1회성 업그레이드.</p>
-            <p><b>⧉ 동위원소</b> — 중성자로 합성하는 보조 아이템. 할인·오프라인 확장·자동화 등.</p>
-            <p><b>✦ 항성</b> — 철 1e100이 모이면 핵융합으로 점화. 항성은 E 생산을 크게 증폭하고 원소를 직접 만들어냅니다. 온도에 따라 강화되는 원소가 달라집니다. 최대 레벨 365 — 행성들의 도움 없이는 도달할 수 없습니다.</p>
-            <p><b>◍ 행성</b> — 티어 순서: 랜덤 행성 → 태양계 행성 → 커스텀 행성 → 특이 행성. 특이 행성은 청사진을 해독하기 전까진 정체를 알 수 없습니다.</p>
-            <p><b>☉ 태양계</b> — 태양 Lv 365 + 아홉 행성 → 태양계 통합. 현재 버전의 끝입니다.</p>
-            <p><b>오프라인</b> — 최대 1,000,000틱(약 14시간)까지 진행. 설정에서 변경 가능합니다.</p>
-          </div>
+          <div class="panel-sub">지금 활용할 수 있는 기능만 안내합니다. 새 기능을 해금하면 이곳에 항목이 추가됩니다.</div>
+          <div class="help-text" id="help-text"></div>
         </div>
       </section>
 
