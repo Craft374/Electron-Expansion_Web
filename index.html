@@ -32,6 +32,7 @@
         <button class="side-btn active" data-tab="main"><span class="ic">◉</span><span class="lb">엔트로피</span></button>
         <button class="side-btn" data-tab="ach" id="nav-ach"><span class="ic">★</span><span class="lb">도전과제</span><span class="nav-badge hidden" id="badge-ach"></span></button>
         <button class="side-btn hidden" data-tab="elements" id="nav-elements"><span class="ic">⬡</span><span class="lb">원소</span><span class="nav-badge hidden" id="badge-elements"></span></button>
+        <button class="side-btn hidden" data-tab="synthesis" id="nav-synthesis"><span class="ic">⚗</span><span class="lb">합성</span><span class="nav-badge hidden" id="badge-synthesis"></span></button>
         <button class="side-btn hidden" data-tab="isotopes" id="nav-isotopes"><span class="ic">⧉</span><span class="lb">동위원소</span><span class="nav-badge hidden" id="badge-isotopes"></span></button>
         <button class="side-btn hidden" data-tab="automation" id="nav-automation"><span class="ic">⟳</span><span class="lb">자동화</span></button>
         <button class="side-btn hidden" data-tab="compression" id="nav-compression"><span class="ic">◈</span><span class="lb">핵 압축</span><span class="nav-badge hidden" id="badge-compression"></span></button>
@@ -183,6 +184,15 @@
         <div class="panel hidden" id="panel-specials">
           <div class="panel-head"><span class="dots purple"></span>특수 연구 — 원소 소모 (1회성)</div>
           <div id="special-list"></div>
+        </div>
+      </section>
+
+      <!-- 합성 -->
+      <section id="tab-synthesis" class="tab-page hidden">
+        <div class="panel">
+          <div class="panel-head"><span class="dots"></span>합성 연구소 <span class="head-tag" id="txt-synth-count"></span></div>
+          <div class="panel-sub">원소를 조합해 <b>화합물</b>을 만듭니다. 화합물을 강화할수록 그 <b>구성 원소</b>의 생산에 배율이 붙습니다. 필요한 원소를 모두 연구해야 합성할 수 있습니다.</div>
+          <div id="synth-list"></div>
         </div>
       </section>
 

@@ -54,6 +54,7 @@ function costHTML(cost) {
 
 function updateNav() {
   setHidden("nav-elements", state.genLevels.neutron < 1 && state.researched < 1);
+  setHidden("nav-synthesis", !synthUnlocked());
   setHidden("nav-isotopes", state.researched < 2);
   setHidden("nav-automation", state.researched < 1);
   setHidden("nav-compression", !compressUnlocked());
@@ -73,6 +74,15 @@ function updateNav() {
         canAfford({ neutron: iso.cost.neutron, entropy: D(iso.cost.entropy) })) isoReady = true;
   });
   setHidden("badge-isotopes", !isoReady);
+
+  var synthReady = false;
+  if (synthUnlocked()) {
+    for (var ci = 0; ci < COMPOUNDS.length; ci++) {
+      var c = COMPOUNDS[ci];
+      if (compoundResearchable(c) && synthLevel(c.id) === 0 && canAfford(synthCost(c))) { synthReady = true; break; }
+    }
+  }
+  setHidden("badge-synthesis", !synthReady);
 }
 
 // 지수 표기(AeB)에 마우스를 올리면 정확한 개수 표시 (너무 크면 미표시)
@@ -799,6 +809,62 @@ function drainAchToasts() {
 }
 
 // ============================================================
+// 합성 탭
+// ============================================================
+function synthSig() {
+  return state.researched + "|" + COMPOUNDS.map(function (c) { return synthLevel(c.id); }).join(",");
+}
+function boostText(cmp) {
+  return cmp.e.map(function (n) { return ELEMENTS[n - 1].sym; }).join("·");
+}
+function buildSynth() {
+  var box = el("synth-list");
+  var html = "";
+  COMPOUNDS.forEach(function (c) {
+    var researchable = compoundResearchable(c);
+    var need = c.e.map(function (n) { return ELEMENTS[n - 1].sym; }).join(", ");
+    if (!researchable) {
+      html += '<div class="synth-card locked"><div class="synth-f">???</div>' +
+        '<div class="synth-n">미해금</div>' +
+        '<div class="synth-need">' + need + ' 연구 필요</div></div>';
+      return;
+    }
+    html += '<div class="synth-card" id="synth-card-' + c.id + '">' +
+      '<div class="synth-f">' + c.f + '</div>' +
+      '<div class="synth-n">' + c.n + ' <small id="synth-lv-' + c.id + '"></small></div>' +
+      '<div class="synth-boost">강화: ' + boostText(c) + ' ×<span id="synth-eff-' + c.id + '"></span></div>' +
+      '<div class="cost-line" id="synth-cost-' + c.id + '"></div>' +
+      '<button class="btn" id="synth-buy-' + c.id + '"></button></div>';
+  });
+  box.innerHTML = html;
+  COMPOUNDS.forEach(function (c) {
+    var b = el("synth-buy-" + c.id);
+    if (b) b.onclick = function () { buySynth(c.id); updateUI(); };
+  });
+}
+function updateSynth() {
+  var s = synthSig();
+  if (sig.synth !== s) { buildSynth(); sig.synth = s; }
+  var count = 0, total = 0;
+  COMPOUNDS.forEach(function (c) {
+    if (compoundResearchable(c)) total++;
+    if (synthLevel(c.id) > 0) count++;
+    if (!compoundResearchable(c)) return;
+    var lv = synthLevel(c.id);
+    var lvEl = el("synth-lv-" + c.id);
+    if (!lvEl) return;
+    lvEl.textContent = lv > 0 ? "Lv " + lv : "";
+    el("synth-eff-" + c.id).textContent = format(Decimal.pow(SYNTH.effect, lv), 2);
+    var cost = synthCost(c);
+    el("synth-cost-" + c.id).innerHTML = costHTML(cost);
+    var btn = el("synth-buy-" + c.id);
+    btn.textContent = lv === 0 ? "합성" : "강화 →Lv" + (lv + 1);
+    btn.disabled = !canAfford(cost);
+  });
+  el("txt-synth-count").textContent = count + " / " + total;
+}
+
+// ============================================================
 // 핵 압축 탭
 // ============================================================
 function buildCompUps() {
@@ -946,6 +1012,7 @@ function updateUI() {
   else if (activeTab === "ach") updateAch();
   else if (activeTab === "automation") updateAuto();
   else if (activeTab === "compression") updateCompression();
+  else if (activeTab === "synthesis") updateSynth();
   else if (activeTab === "elements") { updateFusion(); updateResearch(); updateElemGrid(); updateSpecials(); }
   else if (activeTab === "isotopes") updateIsotopes();
   else if (activeTab === "star") updateStar();

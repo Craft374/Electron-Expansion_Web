@@ -389,6 +389,29 @@ input[type="range"] {
 .iso-card.owned { border-color: rgba(111, 227, 161, 0.35); }
 .iso-owned-tag { color: var(--green); font-size: 13px; font-weight: 600; text-align: center; padding: 8px; }
 
+/* ============ 합성 ============ */
+#synth-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+.synth-card {
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: rgba(10, 16, 27, 0.6);
+  display: flex; flex-direction: column;
+}
+.synth-card.locked { opacity: 0.5; }
+.synth-f { font-size: 18px; font-weight: 800; color: var(--cyan); }
+.synth-card.locked .synth-f { color: var(--dim); }
+.synth-n { font-size: 13px; font-weight: 600; margin: 2px 0 6px; }
+.synth-n small { color: var(--purple); font-weight: 400; }
+.synth-boost { font-size: 11.5px; color: var(--dim); margin-bottom: 6px; }
+.synth-need { font-size: 11px; color: var(--dim); }
+.synth-card .cost-line { font-size: 11.5px; line-height: 1.6; margin: 4px 0 8px; flex: 1; }
+.synth-card .btn { width: 100%; font-size: 12.5px; padding: 7px; }
+
 /* ============ 항성/행성 ============ */
 .star-view {
   display: flex; align-items: center; justify-content: center;

@@ -21,6 +21,7 @@ function freshState() {
     achievements: {},
     achRows: {},
     compression: { cp: D(0), totalCp: D(0), resets: 0, up: { particle: 0, conv: 0, self: 0, start: 0 } },
+    compounds: {},
     sacrifice: { mult: D(1), recovery: 1 },
     autos: (function () {
       var o = {};
@@ -211,8 +212,41 @@ function specialMult(n) {
   return m;
 }
 
+// ---- 합성 (화합물) ----
+function findCompound(id) {
+  for (var i = 0; i < COMPOUNDS.length; i++) if (COMPOUNDS[i].id === id) return COMPOUNDS[i];
+  return null;
+}
+function synthUnlocked() { return state.researched >= SYNTH.reqResearched; }
+function compoundResearchable(cmp) { return Math.max.apply(null, cmp.e) <= state.researched; }
+function synthLevel(id) { return state.compounds[id] || 0; }
+function synthCost(cmp) {
+  var lv = synthLevel(cmp.id);
+  var cost = { elements: {} };
+  cmp.e.forEach(function (e) {
+    cost.elements[e] = D(SYNTH.base).mul(Decimal.pow(SYNTH.grow, lv))
+      .mul(Decimal.pow(ELEM.revDecay, e - 1)).ceil();
+  });
+  return cost;
+}
+function buySynth(id) {
+  var cmp = findCompound(id);
+  if (!cmp || !compoundResearchable(cmp)) return false;
+  if (pay(synthCost(cmp))) { state.compounds[id] = synthLevel(id) + 1; return true; }
+  return false;
+}
+// 원소 n을 강화하는 모든 화합물의 배율 곱
+function synthMult(n) {
+  var m = D(1);
+  for (var i = 0; i < COMPOUNDS.length; i++) {
+    var c = COMPOUNDS[i], lv = state.compounds[c.id];
+    if (lv && c.e.indexOf(n) >= 0) m = m.mul(Decimal.pow(SYNTH.effect, lv));
+  }
+  return m;
+}
+
 function elementMult(n) {
-  var m = fusionMult(n).mul(specialMult(n)).mul(achElementMult());
+  var m = fusionMult(n).mul(specialMult(n)).mul(achElementMult()).mul(synthMult(n));
   if (state.solarSystem) return m.mul(D(SOLAR_SYSTEM.mult));
   return m.mul(planetMult(n));
 }

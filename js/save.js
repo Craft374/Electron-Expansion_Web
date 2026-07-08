@@ -35,6 +35,7 @@ function saveToString() {
       resets: s.compression.resets,
       up: s.compression.up
     },
+    compounds: s.compounds,
     sacrifice: { mult: s.sacrifice.mult.toString(), recovery: s.sacrifice.recovery },
     autos: s.autos,
     star: s.star,
@@ -84,6 +85,7 @@ function loadFromString(str) {
     if (typeof obj.compression.resets === "number") s.compression.resets = obj.compression.resets;
     if (obj.compression.up) Object.assign(s.compression.up, obj.compression.up);
   }
+  if (obj.compounds) s.compounds = obj.compounds;
   if (obj.sacrifice) {
     if (obj.sacrifice.mult) s.sacrifice.mult = D(obj.sacrifice.mult);
     if (typeof obj.sacrifice.recovery === "number") s.sacrifice.recovery = obj.sacrifice.recovery;
