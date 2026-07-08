@@ -23,6 +23,7 @@ function freshState() {
     compression: { cp: D(0), totalCp: D(0), resets: 0, up: { particle: 0, conv: 0, self: 0, start: 0 } },
     compounds: {},
     sacrifice: { mult: D(1), recovery: 1 },
+    stellar: { collapses: 0, bonus: D(1), firstStar: false, permanent: false },
     autos: (function () {
       var o = {};
       AUTO_TARGETS.forEach(function (t) { o[t.key] = { on: false, level: 0, timer: 0 }; });
@@ -246,7 +247,7 @@ function synthMult(n) {
 }
 
 function elementMult(n) {
-  var m = fusionMult(n).mul(specialMult(n)).mul(achElementMult()).mul(synthMult(n));
+  var m = fusionMult(n).mul(specialMult(n)).mul(achElementMult()).mul(synthMult(n)).mul(starBonusMult());
   if (state.solarSystem) return m.mul(D(SOLAR_SYSTEM.mult));
   return m.mul(planetMult(n));
 }
@@ -337,10 +338,19 @@ function doCompress() {
   return true;
 }
 
+// 첫 항성 이후에는(붕괴로 항성이 없어져도) 정방향 물리가 영구 유지된다.
+function hasStarPhysics() {
+  return !!(state.star || (state.stellar && state.stellar.firstStar));
+}
+// 붕괴 프레스티지 보너스 (전체 원소 생산에 곱)
+function starBonusMult() {
+  return state.stellar ? D(state.stellar.bonus) : D(1);
+}
+
 function elementProdRate(n) {
   if (state.researched < n) return D(0);
   var base;
-  if (state.star) {
+  if (hasStarPhysics()) {
     // 항성 이후: 정방향 캐스케이드 (낮은 원소 → 높은 원소). 철 수급 가능.
     if (n === 1) base = elementSeed();
     else base = state.elements[n - 2].mul(ELEM.cascade);
@@ -421,7 +431,7 @@ function tick(dt) {
   // 3. 원소 연쇄 생산 (항성 이전에는 1.8e308 상한)
   var prods = [];
   for (var n = 1; n <= state.researched; n++) prods[n] = elementProdRate(n);
-  var capped = !state.star;
+  var capped = !hasStarPhysics();
   for (n = 1; n <= state.researched; n++) {
     state.elements[n - 1] = state.elements[n - 1].add(prods[n].mul(dt));
     if (capped && state.elements[n - 1].gt(ELEM.cap)) state.elements[n - 1] = D(ELEM.cap);
@@ -809,9 +819,40 @@ function createStar() {
   if (state.star || state.researched < ELEMENTS.length) return false;
   if (pay(starRecipeCost())) {
     state.star = { level: 1, temp: STAR.tempDefault };
+    state.stellar.firstStar = true;   // 이후 정방향 물리 영구 적용
     return true;
   }
   return false;
+}
+
+// ---- 항성 붕괴 (프레스티지) ----
+function collapseAvailable() {
+  return state.star && !state.stellar.permanent && state.star.level >= STAR.collapseLevel;
+}
+function collapseIsPermanent() {
+  return state.stellar.collapses + 1 >= STAR.permanentAt;
+}
+function doCollapse() {
+  if (!collapseAvailable()) return false;
+  state.stellar.collapses++;
+  state.stellar.bonus = D(state.stellar.bonus).mul(STAR.collapseBonus);
+  if (state.stellar.collapses >= STAR.permanentAt) {
+    state.stellar.permanent = true;   // 이후 붕괴 불가, 기존 항성 성장으로 전환
+  }
+  // 리셋: 원소·입자·생성기·변환기·E·항성·행성 (연구·프레스티지 자원은 유지)
+  state.particles = { electron: D(0), proton: D(0), neutron: D(0) };
+  state.genLevels = { electron: compStartLevel(), proton: 0, neutron: 0 };
+  state.convLevels = { electron: 0, proton: 0, neutron: 0 };
+  state.convOn = { electron: true, proton: true, neutron: true };
+  state.entropy = D(0);
+  state.elements = ELEMENTS.map(function () { return D(0); });
+  if (!state.stellar.permanent) {
+    state.star = null;
+    state.planets = { random: [], custom: [], special: {}, blueprints: {}, solar: {} };
+    state.planetResearched = false;
+    state.solarSystem = false;
+  }
+  return true;
 }
 
 function starLevelCost() {
@@ -1052,7 +1093,7 @@ function currentGoal() {
   if (state.researched < ELEMENTS.length) {
     return "다음 원소: " + ELEMENTS[state.researched].name + " (" + ELEMENTS[state.researched].sym + ") 연구";
   }
-  if (!state.star) return "철 1e100을 모아 핵융합으로 항성을 점화하세요";
+  if (!state.star) return "철 등 원소를 모아 핵융합으로 항성을 점화하세요 (항성 이후 정방향 물리)";
   if (!state.solarSystem) {
     return "태양 Lv " + STAR.solarLevel + " + 태양계 행성 9개 → 태양계 구성 (" +
       "Lv " + state.star.level + " · 행성 " + solarPlanetCount() + "/9)";

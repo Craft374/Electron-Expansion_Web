@@ -210,7 +210,7 @@
       <section id="tab-star" class="tab-page hidden">
         <div class="panel purple" id="star-locked">
           <div class="panel-head"><span class="dots purple"></span>핵융합</div>
-          <div class="panel-sub">철 핵이 임계질량 <b>1e100</b>에 도달하면 중력 붕괴가 시작되고, 그 반동으로 항성이 점화됩니다.</div>
+          <div class="panel-sub">아래 원소를 모아 핵융합을 일으키면 항성이 점화됩니다. 항성 이후에는 원소 물리가 <b>정방향</b>으로 바뀌어(낮은 원소 → 높은 원소) 철 수급이 가능해집니다.</div>
           <div id="star-recipe"></div>
           <button class="btn big-purple" id="btn-ignite">✦ 핵융합 — 항성 점화</button>
         </div>
@@ -236,6 +236,13 @@
               </div>
               <div class="hint" id="txt-star-solar-hint"></div>
             </div>
+          </div>
+
+          <div class="panel purple" id="panel-collapse">
+            <div class="panel-head"><span class="dots purple"></span>중력 붕괴 — 항성 프레스티지</div>
+            <div class="panel-sub">항성을 <b>Lv <span id="txt-collapse-req"></span></b> 이상으로 키운 뒤 붕괴시키면, 모든 것(원소·입자·항성·행성)이 리셋되는 대신 <b>모든 원소 생산에 영구 배율</b>을 얻습니다. 연구·프레스티지 자원은 유지됩니다. 반복할수록 강해지고, <b><span id="txt-collapse-perm"></span>회</b> 붕괴 후에는 영구 항성이 됩니다.</div>
+            <div class="kv">붕괴 횟수: <span id="txt-collapse-count"></span> · 현재 항성 보너스: ×<span id="txt-collapse-bonus"></span></div>
+            <button class="btn big-purple" id="btn-collapse"></button>
           </div>
         </div>
       </section>

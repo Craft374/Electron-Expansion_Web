@@ -469,6 +469,21 @@ function updateStar() {
   el("txt-star-solar-hint").textContent = maxed
     ? "태양이 1년을 채웠습니다! 아홉 행성을 모아 태양계를 구성하세요."
     : "태양계 구성 조건: Lv " + STAR.solarLevel + " — 행성들의 생산 보너스가 필요할 겁니다";
+
+  // 붕괴 프레스티지
+  setHidden("panel-collapse", state.stellar.permanent);
+  if (!state.stellar.permanent) {
+    el("txt-collapse-req").textContent = STAR.collapseLevel;
+    el("txt-collapse-perm").textContent = STAR.permanentAt;
+    el("txt-collapse-count").textContent = state.stellar.collapses;
+    el("txt-collapse-bonus").textContent = format(starBonusMult(), 2);
+    var cbtn = el("btn-collapse");
+    var willPerm = collapseIsPermanent();
+    cbtn.textContent = collapseAvailable()
+      ? (willPerm ? "✦ 붕괴 → 영구 항성" : "✦ 중력 붕괴 (다음 보너스 ×" + STAR.collapseBonus + ")")
+      : "Lv " + STAR.collapseLevel + " 이상에서 붕괴 가능";
+    cbtn.disabled = !collapseAvailable();
+  }
 }
 
 // ============================================================
@@ -1101,6 +1116,12 @@ function initUI() {
   el("rng-temp").oninput = function () { setStarTemp(Number(this.value)); updateStar(); };
   el("btn-star-lv").onclick = function () { buyStarLevel(); updateUI(); };
   el("btn-star-max").onclick = function () { buyStarLevelMax(); updateUI(); };
+  el("btn-collapse").onclick = function () {
+    if (collapseAvailable() &&
+        confirm("항성을 붕괴시킬까요? 원소·입자·항성·행성이 리셋되고 영구 배율을 얻습니다.")) {
+      doCollapse(); updateUI();
+    }
+  };
 
   // 행성
   el("btn-random-planet").onclick = function () { buildRandomPlanet(); updateUI(); };

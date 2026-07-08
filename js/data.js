@@ -277,6 +277,10 @@ var STAR = {
   levelCostFe: "1e7",    // 항성 이후 정방향이라 철 수급 가능
   levelCostMult: 1.12,
   maxLevel: 365,         // 태양 최대 레벨 (1년)
+  // --- 붕괴 프레스티지 ---
+  collapseLevel: 30,     // 이 레벨 이상이면 붕괴 가능
+  collapseBonus: 5,      // 붕괴 1회마다 전체 원소 생산 ×5 (영구)
+  permanentAt: 8,        // 붕괴 8회 후 영구 항성 (더는 붕괴 불가, 기존 항성 성장으로)
   tempMin: 2000,
   tempMax: 40000,        // KELT-9b 보유 시 +5000
   tempDefault: 5778,

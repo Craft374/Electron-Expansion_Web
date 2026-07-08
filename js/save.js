@@ -37,6 +37,12 @@ function saveToString() {
     },
     compounds: s.compounds,
     sacrifice: { mult: s.sacrifice.mult.toString(), recovery: s.sacrifice.recovery },
+    stellar: {
+      collapses: s.stellar.collapses,
+      bonus: s.stellar.bonus.toString(),
+      firstStar: s.stellar.firstStar,
+      permanent: s.stellar.permanent
+    },
     autos: s.autos,
     star: s.star,
     planets: s.planets,
@@ -86,6 +92,12 @@ function loadFromString(str) {
     if (obj.compression.up) Object.assign(s.compression.up, obj.compression.up);
   }
   if (obj.compounds) s.compounds = obj.compounds;
+  if (obj.stellar) {
+    if (typeof obj.stellar.collapses === "number") s.stellar.collapses = obj.stellar.collapses;
+    if (obj.stellar.bonus) s.stellar.bonus = D(obj.stellar.bonus);
+    if (typeof obj.stellar.firstStar === "boolean") s.stellar.firstStar = obj.stellar.firstStar;
+    if (typeof obj.stellar.permanent === "boolean") s.stellar.permanent = obj.stellar.permanent;
+  }
   if (obj.sacrifice) {
     if (obj.sacrifice.mult) s.sacrifice.mult = D(obj.sacrifice.mult);
     if (typeof obj.sacrifice.recovery === "number") s.sacrifice.recovery = obj.sacrifice.recovery;
