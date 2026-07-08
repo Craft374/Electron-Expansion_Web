@@ -22,7 +22,7 @@
     <!-- ===== 사이드바 ===== -->
     <aside id="sidebar">
       <div id="logo">
-        <div class="logo-mark"><img src="EE_Logo.png" alt="Electron Expansion" class="logo-img"></div>
+        <div class="logo-mark"><img src="logo.png" alt="Electron Expansion" class="logo-img"></div>
         <div class="logo-name">Electron<br>Expansion</div>
       </div>
 
@@ -91,7 +91,10 @@
         <div class="panel">
           <div class="panel-head"><span class="dots"></span>자동화 장치</div>
           <div class="panel-sub">생성기·변환기·원소 업그레이드를 자동으로 구매합니다. 각 항목마다 딜레이를 단축할 수 있고(최소 0초 = 상시), 개별로 껐다 켤 수 있습니다. 단축 비용은 원소로 지불하며, 끝까지 단축하려면 무거운 원소가 필요합니다.</div>
-          <div class="btn-row"><button class="btn" id="btn-auto-all-max">전체 최대 단축</button></div>
+          <div class="btn-row">
+            <button class="btn" id="btn-auto-all-toggle">전체 가동</button>
+            <button class="btn" id="btn-auto-all-max">전체 최대 단축</button>
+          </div>
           <div id="auto-list"></div>
         </div>
       </section>
@@ -213,7 +216,7 @@
 
       <!-- 행성 -->
       <section id="tab-planets" class="tab-page hidden">
-        <div class="panel">
+        <div class="panel" id="planet-tier1">
           <div class="panel-head"><span class="dots"></span>티어 1 — 랜덤 행성</div>
           <div class="panel-sub">우주의 먼지를 뭉쳐 행성을 만듭니다. 어떤 원소가 강화될지는 만들어봐야 압니다. (최대 <span id="txt-random-max"></span>개)</div>
           <div class="row-flex">
@@ -225,7 +228,7 @@
           </div>
         </div>
 
-        <div class="panel">
+        <div class="panel" id="planet-tier2">
           <div class="panel-head"><span class="dots"></span>티어 2 — 태양계 행성 · 수금지화목토천해명</div>
           <div class="panel-sub">각 행성의 특징적인 원소로 제작합니다. 태양 레벨업의 핵심 조력자입니다.</div>
           <div id="solar-planet-grid"></div>
@@ -254,7 +257,7 @@
           </div>
         </div>
 
-        <div class="panel">
+        <div class="panel" id="planet-tier4">
           <div class="panel-head"><span class="dots purple"></span>티어 4 — 특이 행성 · 심우주 신호</div>
           <div class="panel-sub">심우주에서 정체불명의 행성 신호가 잡힙니다. 청사진을 해독해야 정체를 알 수 있고, 건설해야 효과가 밝혀집니다.</div>
           <div id="exo-list"></div>

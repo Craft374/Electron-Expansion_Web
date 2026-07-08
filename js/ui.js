@@ -241,11 +241,11 @@ function updateSacrifice() {
     " → 누적 ×" + format(sacNeutronMult().mul(f), 2);
   var rec = sacRecovery();
   if (rec >= 1) {
-    el("txt-sac-recovery").textContent = "정상";
+    el("txt-sac-recovery").textContent = "정상 (희생 가능)";
   } else {
-    el("txt-sac-recovery").textContent = Math.floor(rec * 100) + "% 복구 중…";
+    el("txt-sac-recovery").textContent = Math.floor(rec * 100) + "% 복구 중… (완전 복구 후 희생 가능)";
   }
-  el("btn-sacrifice").disabled = false;
+  el("btn-sacrifice").disabled = !canSacrifice();
 }
 
 // ============================================================
@@ -632,6 +632,12 @@ function updatePlanets() {
     sig.planets = s;
   }
 
+  // 티어 점진 공개: 티어1은 처음부터, 이후 태양 레벨 50당 하나씩 공개
+  var lv = state.star ? state.star.level : 0;
+  setHidden("planet-tier2", lv < 50);
+  setHidden("panel-custom", lv < 100);
+  setHidden("planet-tier4", lv < 150);
+
   // 티어 1
   el("txt-random-max").textContent = RANDOM_PLANET.max;
   var rFull = state.planets.random.length >= RANDOM_PLANET.max;
@@ -820,6 +826,8 @@ function buildAuto() {
 function updateAuto() {
   var s = autoSig();
   if (sig.auto !== s) { buildAuto(); sig.auto = s; }
+  var toggleBtn = el("btn-auto-all-toggle");
+  if (toggleBtn) toggleBtn.textContent = allAutoOn() ? "전체 정지" : "전체 가동";
   AUTO_TARGETS.filter(autoTargetVisible).forEach(function (t) {
     var a = state.autos[t.key];
     var d = autoDelay(a.level);
@@ -958,8 +966,9 @@ function initUI() {
     if (doSacrifice()) updateUI();
   };
 
-  // 자동화: 전체 최대 단축
+  // 자동화: 전체 최대 단축 / 전체 가동·정지
   el("btn-auto-all-max").onclick = function () { buyAllAutoMax(); updateUI(); };
+  el("btn-auto-all-toggle").onclick = function () { setAllAuto(!allAutoOn()); updateUI(); };
 
   // 설정: 사이드바 표시 옵션
   buildSideResOpts();

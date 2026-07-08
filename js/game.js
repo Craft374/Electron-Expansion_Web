@@ -83,19 +83,34 @@ function achRowDone(row) {
   return true;
 }
 
-// 입자 생산에 곱해지는 도전과제 배율 (개별 + B줄 보상)
+// 입자 생산에 곱해지는 도전과제 배율 (개별 + 줄 보상)
 function achParticleMult(key) {
   var m = 1;
   if (key === "electron" && achDone("b2")) m *= 1.05;
   if (key === "proton" && achDone("b3")) m *= 1.05;
   if (key === "neutron" && achDone("b5")) m *= 1.05;
+  if (key === "neutron" && achDone("c6")) m *= 1.1;
+  if (key === "neutron" && achDone("d5")) m *= 1.1;
   if (achRowDone("B")) m *= 1.1;
+  if (achRowDone("E")) m *= 1.25;
   return m;
 }
 
-// E 생산에 곱해지는 도전과제 배율 (A줄 보상)
+// E 생산에 곱해지는 도전과제 배율 (A·D·E줄 보상)
 function achEntropyMult() {
-  return achRowDone("A") ? D(1.05) : D(1);
+  var m = D(1);
+  if (achRowDone("A")) m = m.mul(1.05);
+  if (achRowDone("D")) m = m.mul(1.1);
+  if (achRowDone("E")) m = m.mul(1.25);
+  return m;
+}
+
+// 원소 생산에 곱해지는 도전과제 배율 (C·E줄 보상)
+function achElementMult() {
+  var m = D(1);
+  if (achRowDone("C")) m = m.mul(1.1);
+  if (achRowDone("E")) m = m.mul(1.25);
+  return m;
 }
 
 // 희생: 생산 복구 계수 (0~1)
@@ -114,8 +129,13 @@ function sacrificeGainFactor() {
   return 1 + l * SACRIFICE.gainCoef;
 }
 
+// 복구 100%(완전 회복) 상태에서만 희생 가능 → 연타 방지
+function canSacrifice() {
+  return sacUnlocked() && sacRecovery() >= 1;
+}
+
 function doSacrifice() {
-  if (!sacUnlocked()) return false;
+  if (!canSacrifice()) return false;
   state.sacrifice.mult = D(state.sacrifice.mult).mul(sacrificeGainFactor());
   state.sacrifice.recovery = 0;
   return true;
@@ -191,7 +211,7 @@ function specialMult(n) {
 }
 
 function elementMult(n) {
-  var m = fusionMult(n).mul(specialMult(n));
+  var m = fusionMult(n).mul(specialMult(n)).mul(achElementMult());
   if (state.solarSystem) return m.mul(D(SOLAR_SYSTEM.mult));
   return m.mul(planetMult(n));
 }
@@ -585,9 +605,10 @@ function autoDelay(level) {
   return d;
 }
 
-// 단축 비용: 레벨이 오를수록 더 무거운 원소가 필요 (끝까지 = 철)
+// 단축 비용: 지금 보유 중인 "최신(가장 무거운) 원소"의 자연보유량 일부.
+// 진행 단계에 맞춰 값이 오르므로 그 시점에 감당 가능하고, 초반에 바로 열린다.
 function autoStepCost(level) {
-  var e = Math.min(26, Math.max(1, 1 + Math.floor(level * 25 / AUTO_MAX_LEVEL)));
+  var e = Math.max(1, state.researched);
   var amt = D(ELEM_SCALE[e - 1]).mul(AUTO_STEP_BASE_FRAC).mul(Decimal.pow(AUTO_STEP_GROW, level));
   var cost = { elements: {} };
   cost.elements[e] = amt;
@@ -615,6 +636,22 @@ function buyAllAutoMax() {
     if (autoTargetVisible(t)) total += buyAutoStepMax(t.key);
   });
   return total;
+}
+
+// 보이는 모든 자동화 항목을 한 번에 가동/정지
+function setAllAuto(on) {
+  AUTO_TARGETS.forEach(function (t) {
+    if (autoTargetVisible(t) && state.autos[t.key]) state.autos[t.key].on = on;
+  });
+}
+function allAutoOn() {
+  var any = false, all = true;
+  AUTO_TARGETS.forEach(function (t) {
+    if (!autoTargetVisible(t)) return;
+    any = true;
+    if (!state.autos[t.key].on) all = false;
+  });
+  return any && all;
 }
 
 function autoBuyTarget(t) {

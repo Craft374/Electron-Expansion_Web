@@ -350,20 +350,69 @@ var ACHIEVEMENTS = [
   { id: "b8", row: "B", name: "이런 C..", icon: "⚫", cond: "탄소를 연구하세요.",
     eff: "", check: function () { return state.researched >= 6; } },
   { id: "b9", row: "B", name: "과자봉지", icon: "🍿", cond: "질소를 연구하세요.",
-    eff: "", check: function () { return state.researched >= 7; } }
+    eff: "", check: function () { return state.researched >= 7; } },
+
+  // ---- C줄: 중반 원소·자동화·희생 (제목/설명은 자유롭게 바꾸세요) ----
+  { id: "c1", row: "C", name: "숨 쉬는 별", icon: "🫧", cond: "산소를 연구하세요.",
+    eff: "", check: function () { return state.researched >= 8; } },
+  { id: "c2", row: "C", name: "네온사인", icon: "💡", cond: "네온을 연구하세요.",
+    eff: "", check: function () { return state.researched >= 10; } },
+  { id: "c3", row: "C", name: "자동화 시대", icon: "⚙️", cond: "자동화 항목을 하나 가동하세요.",
+    eff: "", check: function () { return AUTO_TARGETS.some(function (t) { return state.autos[t.key] && state.autos[t.key].on; }); } },
+  { id: "c4", row: "C", name: "티끌 모아", icon: "🌪️", cond: "초당 1e15 E 이상 획득하세요.",
+    eff: "", check: function () { return entropyRateDisplay().gte(1e15); } },
+  { id: "c5", row: "C", name: "첫 희생", icon: "🩸", cond: "엔트로피를 한 번 희생하세요.",
+    eff: "", check: function () { return state.sacrifice && D(state.sacrifice.mult).gt(1); } },
+  { id: "c6", row: "C", name: "동위원소 수집가", icon: "⚗️", cond: "동위원소를 5개 이상 합성하세요.",
+    eff: "중성자 생산 ×1.1", check: function () { return Object.keys(state.isotopes).length >= 5; } },
+
+  // ---- D줄: 후반 원소·특수연구·자동화 ----
+  { id: "d1", row: "D", name: "소금", icon: "🧂", cond: "염소를 연구하세요.",
+    eff: "", check: function () { return state.researched >= 17; } },
+  { id: "d2", row: "D", name: "연금술사", icon: "🧫", cond: "특수 연구를 3개 이상 완료하세요.",
+    eff: "", check: function () { return Object.keys(state.special).length >= 3; } },
+  { id: "d3", row: "D", name: "폭발적", icon: "💥", cond: "초당 1e40 E 이상 획득하세요.",
+    eff: "", check: function () { return entropyRateDisplay().gte(1e40); } },
+  { id: "d4", row: "D", name: "상시 가동", icon: "🤖", cond: "자동화 항목을 상시(0초)까지 단축하세요.",
+    eff: "", check: function () { return AUTO_TARGETS.some(function (t) { return state.autos[t.key] && state.autos[t.key].level >= AUTO_DELAYS.length - 1; }); } },
+  { id: "d5", row: "D", name: "희생의 대가", icon: "🗡️", cond: "희생 배율을 ×2 이상으로 만드세요.",
+    eff: "중성자 생산 ×1.1", check: function () { return state.sacrifice && D(state.sacrifice.mult).gte(2); } },
+  { id: "d6", row: "D", name: "철의 시대", icon: "🛠️", cond: "철을 연구하세요.",
+    eff: "", check: function () { return state.researched >= ELEMENTS.length; } },
+
+  // ---- E줄: 항성·행성·태양계 ----
+  { id: "e1", row: "E", name: "별의 탄생", icon: "✦", cond: "항성을 점화하세요.",
+    eff: "", check: function () { return !!state.star; } },
+  { id: "e2", row: "E", name: "첫 세계", icon: "🪐", cond: "행성을 하나 이상 건설하세요.",
+    eff: "", check: function () {
+      return state.planets.random.length > 0 || state.planets.custom.length > 0 ||
+        solarPlanetCount() > 0 || EXOPLANETS.some(function (x) { return state.planets.special[x.id]; });
+    } },
+  { id: "e3", row: "E", name: "심우주 신호", icon: "🛸", cond: "특이 행성을 하나 건설하세요.",
+    eff: "", check: function () { return EXOPLANETS.some(function (x) { return state.planets.special[x.id]; }); } },
+  { id: "e4", row: "E", name: "아홉 세계", icon: "🌍", cond: "태양계 행성 9개를 모두 건설하세요.",
+    eff: "", check: function () { return solarPlanetCount() >= SOLAR_PLANETS.length; } },
+  { id: "e5", row: "E", name: "일 년", icon: "☀️", cond: "태양을 Lv 365까지 올리세요.",
+    eff: "", check: function () { return state.star && state.star.level >= STAR.maxLevel; } },
+  { id: "e6", row: "E", name: "하나의 계", icon: "🌌", cond: "태양계를 구성하세요.",
+    eff: "", check: function () { return !!state.solarSystem; } }
 ];
 
 // 줄 보상: 한 줄 전부 달성 시
 var ACH_ROWS = [
   { row: "A", reward: "초당 E 생산 ×1.05" },
-  { row: "B", reward: "모든 입자 생산 ×1.1" }
+  { row: "B", reward: "모든 입자 생산 ×1.1" },
+  { row: "C", reward: "원소 생산 ×1.1" },
+  { row: "D", reward: "초당 E 생산 ×1.1" },
+  { row: "E", reward: "모든 생산 ×1.25" }
 ];
 
 // ---------- 엔트로피 희생 ----------
 var SACRIFICE = {
   reqResearched: 5,       // 붕소 이후
   recoverySeconds: 30,    // 생산이 0 → 원상복구까지
-  gainCoef: 0.002         // 배율 획득 계수 (매우 약함 — 초당 E log10에 비례)
+  gainCoef: 0.0006        // 배율 획득 계수 (아주 약함 — 초당 E log10에 비례)
+  // 희생은 복구 100%(완전 회복) 상태에서만 가능 → 연타 방지
 };
 
 // ---------- 자동화 ----------
@@ -380,17 +429,17 @@ var AUTO_TARGETS = [
   { key: "track_accel",   name: "입자 가속 자동",     kind: "track", t: "accel" }
 ];
 
-// 딜레이 스케줄: 600s → 30s씩 → 60s부터 5s씩 → 10s부터 1s씩 → 0s(상시)
+// 딜레이 스케줄: 60s(1분)부터 5s씩 감소 → 0s(상시)
 var AUTO_DELAYS = (function () {
   var a = [], d;
-  for (d = 600; d > 60; d -= 30) a.push(d);
-  for (d = 60; d > 10; d -= 5) a.push(d);
-  for (d = 10; d > 0; d -= 1) a.push(d);
+  for (d = 60; d > 0; d -= 5) a.push(d);
   a.push(0);
-  return a;
+  return a;   // [60,55,...,5,0] = 13단계 (레벨 0~12)
 })();
-var AUTO_STEP_BASE_FRAC = 0.001;   // 원소 자연보유량 대비 첫 단계 비용 비율
-var AUTO_STEP_GROW = 1.15;
+// 단축 비용: 보유 중인 "최신(가장 무거운) 원소"의 자연보유량 일부.
+// 진행 단계의 원소로 지불하므로 그 시점에 감당 가능하다.
+var AUTO_STEP_BASE_FRAC = 1e-4;    // 최신 원소 자연보유량 대비 첫 단계 비용 비율
+var AUTO_STEP_GROW = 1.6;
 
 // ---------- 시스템 ----------
 var SYSTEM = {
