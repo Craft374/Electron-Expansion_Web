@@ -1,0 +1,314 @@
+// ============================================================
+// data.js — 밸런스 수치 & 게임 데이터 전부
+// ⭐ 숫자를 바꾸고 싶으면 이 파일만 보면 됩니다.
+// ============================================================
+
+function D(x) { return new Decimal(x); }
+
+// ---------- 입자 생성기 ----------
+// rate = base × 레벨 × 1.18^(레벨-1)
+var GENERATORS = {
+  electron: { name: "전자 생성기",   base: 1.2, cost0: 0,    costMult: 1.9  },
+  proton:   { name: "양성자 생성기", base: 0.6, cost0: 500,  costMult: 2.0  },
+  neutron:  { name: "중성자 생성기", base: 0.3, cost0: 3000, costMult: 2.05, unlockProton: 150 }
+};
+var GEN_RATE_GROW = 1.18;
+var GEN_ORDER = ["electron", "proton", "neutron"];
+
+// ---------- 입자 → E 변환 ----------
+// 입자는 변환해야만 E가 됩니다. 변환기는 입자별로 따로 구매.
+// 변환기 속도 = base × 1.9^(레벨-1) (개/초)
+var CONVERTERS = {
+  electron: { name: "전자 변환기",   value: 1,   base: 2,   cost0: 50,    costMult: 2.2 },
+  proton:   { name: "양성자 변환기", value: 10,  base: 1,   cost0: 1000,  costMult: 2.3 },
+  neutron:  { name: "중성자 변환기", value: 100, base: 0.5, cost0: 8000,  costMult: 2.4 }
+};
+var CONV_RATE_GROW = 1.9;
+
+// ---------- 원소 (수소 ~ 철, 26종) ----------
+var ELEMENTS = [
+  { sym: "H",  name: "수소",     color: "#7fd4ff" },
+  { sym: "He", name: "헬륨",     color: "#ffd27f" },
+  { sym: "Li", name: "리튬",     color: "#ff9e9e" },
+  { sym: "Be", name: "베릴륨",   color: "#9effa8" },
+  { sym: "B",  name: "붕소",     color: "#d4a373" },
+  { sym: "C",  name: "탄소",     color: "#8d99ae" },
+  { sym: "N",  name: "질소",     color: "#6fa8dc" },
+  { sym: "O",  name: "산소",     color: "#ff6b6b" },
+  { sym: "F",  name: "플루오린", color: "#b5e48c" },
+  { sym: "Ne", name: "네온",     color: "#ff7bd5" },
+  { sym: "Na", name: "나트륨",   color: "#ffd166" },
+  { sym: "Mg", name: "마그네슘", color: "#a8dadc" },
+  { sym: "Al", name: "알루미늄", color: "#ced4da" },
+  { sym: "Si", name: "규소",     color: "#b08968" },
+  { sym: "P",  name: "인",       color: "#ffba08" },
+  { sym: "S",  name: "황",       color: "#ffe45e" },
+  { sym: "Cl", name: "염소",     color: "#9ef01a" },
+  { sym: "Ar", name: "아르곤",   color: "#b298dc" },
+  { sym: "K",  name: "칼륨",     color: "#f4a261" },
+  { sym: "Ca", name: "칼슘",     color: "#e9ecef" },
+  { sym: "Sc", name: "스칸듐",   color: "#c9ada7" },
+  { sym: "Ti", name: "타이타늄", color: "#adb5bd" },
+  { sym: "V",  name: "바나듐",   color: "#94d2bd" },
+  { sym: "Cr", name: "크로뮴",   color: "#a2d2ff" },
+  { sym: "Mn", name: "망가니즈", color: "#e5989b" },
+  { sym: "Fe", name: "철",       color: "#d08c60" }
+];
+
+var GAS_SET = [1, 2, 7, 9, 10, 17, 18];   // 기체 원소
+
+// ---------- 원소 생산 ----------
+var ELEM = {
+  h_base: 0.3,        // 수소 기본 생산 (개/초)
+  cascade: 0.04,      // 원소 N-1 보유량의 4%/초 만큼 원소 N 생산
+  eBase: 3,           // 수소 1개당 초당 E
+  eGrow: 6            // 원소 단계당 E 생산 ×6
+};
+
+// ---------- 원소 업그레이드 4종 ----------
+// 1) 융합 강화: 원소 하나씩 순환하며 생산 ×1.5 (원소당 최대 50회)
+var FUSION = {
+  effect: 1.5,
+  costBase: 4000,
+  costMult: 2.7,        // 삼중수소 -0.2, 융합 촉진 -0.1 (최저 2.4)
+  capPerElement: 50
+};
+// 2~4) 공통 업그레이드 트랙
+var TRACKS = {
+  condense: { name: "엔트로피 응축", desc: "모든 원소의 E 생산 ×1.25", effect: 1.25,
+              capPer: 10, costBase: 1e5, costMult: 3.2 },
+  hflux:    { name: "수소 선속",     desc: "수소 기본 생산 ×1.3",      effect: 1.3,
+              capPer: 5,  costBase: 5e4, costMult: 4.0 },
+  accel:    { name: "입자 가속",     desc: "입자 생성기 생산 ×1.5",    effect: 1.5,
+              capPer: 4,  costBase: 2e4, costMult: 2.8 }
+};
+var TRACK_ORDER = ["condense", "hflux", "accel"];
+
+// ---------- 원소 연구 비용 ----------
+var RESEARCH_HYDROGEN = { proton: 150, electron: 600, entropy: 2000 };
+var RESEARCH_TABLE = [
+  null,
+  { prev: 40, e: "5e3", n: 0 },   // He
+  { prev: 500, e: "1e5", n: 200 },   // Li
+  { prev: 7.5e4, e: "4e8", n: 2.5e5 },   // Be
+  { prev: 6.5e7, e: "1.6e13", n: 1e8 },   // B
+  { prev: 2.5e11, e: "6.5e18", n: 2e10 },   // C
+  { prev: 2.6e15, e: "5.5e24", n: 4e12 },   // N
+  { prev: 6e19, e: "1.6e31", n: 3e14 },   // O
+  { prev: 1.4e24, e: "3.6e37", n: 1.5e15 },   // F
+  { prev: 5.3e28, e: "3.7e44", n: 7.5e15 },   // Ne
+  { prev: 2.3e33, e: "1.3e51", n: 4e16 },   // Na
+  { prev: 1.35e38, e: "1.5e58", n: 2e17 },   // Mg
+  { prev: 4.8e42, e: "1.4e64", n: 1e18 },   // Al
+  { prev: 1.5e48, e: "1e72", n: 5e18 },   // Si
+  { prev: 1.1e53, e: "1.3e79", n: 2.5e19 },   // P
+  { prev: 7.8e57, e: "3e85", n: 1.2e20 },   // S
+  { prev: 5.5e63, e: "1e93", n: 6e20 },   // Cl
+  { prev: 3e69, e: "5.4e100", n: 3e22 },   // Ar
+  { prev: 5.4e74, e: "9.5e107", n: 1.6e23 },   // K
+  { prev: 9e79, e: "3.9e114", n: 8e23 },   // Ca
+  { prev: "2.3e93", e: "1e133", n: 4e24 },   // Sc  (여기부터 간격이 길어짐)
+  { prev: "1.2e107", e: "1e150", n: 2e25 },   // Ti
+  { prev: "6.5e120", e: "1e170", n: 1e26 },   // V
+  { prev: "7e134", e: "1e190", n: 5e26 },   // Cr
+  { prev: "2.3e149", e: "1e212", n: 2.7e27 },   // Mn
+  { prev: "1.7e164", e: "1e222", n: 1.4e28 }   // Fe
+];
+
+// 3일차 기준 자연 보유량 스케일 (비용 책정의 기준값)
+var ELEM_SCALE = [
+  "6e22", "4e29", "2e36", "6e42", "2e49", "6e55", "2e62", "3e68", "7e74",
+  "1e81", "2e87", "3e93", "3e99", "4e105", "4e111", "4e117", "3e123", "2e129",
+  "1e135", "5e140", "3e146", "2e152", "2e158", "1e164", "7e170", "4e180"
+];
+
+// ---------- 특수 연구 (원소를 소모하는 1회성 업그레이드) ----------
+var SPECIALS = [
+  { id: "degeneracy", name: "전자 축퇴압",   req: 3,  cost: { 3: "1e12" },
+    desc: "전자 생성기 생산 ×10" },
+  { id: "catalyst",   name: "촉매 순환",     req: 6,  cost: { 6: "1e26" },
+    desc: "수소 생산 ×5" },
+  { id: "reflux",     name: "엔트로피 역류", req: 8,  cost: { 8: "1e33" },
+    desc: "모든 원소의 E 생산 ×3" },
+  { id: "gasloop",    name: "기체 순환",     req: 10, cost: { 10: "1e40" },
+    desc: "기체 원소 생산 ×3" },
+  { id: "nstar",      name: "중성자 물질",   req: 14, cost: { 14: "1e60" },
+    desc: "중성자 생성기 생산 ×10" },
+  { id: "halffusion", name: "융합 촉진",     req: 16, cost: { 16: "1e66" },
+    desc: "융합 강화 가격 상승률 -0.1" },
+  { id: "crystal",    name: "금속 결정화",   req: 21, cost: { 20: "1e102" },
+    desc: "스칸듐~철 생산 ×3" },
+  { id: "site1", name: "행성 부지 확장 I",   req: 26, cost: { 26: "1e196" },
+    desc: "커스텀 행성 한도 +1" },
+  { id: "site2", name: "행성 부지 확장 II",  req: 26, cost: { 26: "1e199" },
+    desc: "커스텀 행성 한도 +1" },
+  { id: "site3", name: "행성 부지 확장 III", req: 26, cost: { 26: "1e202" },
+    desc: "커스텀 행성 한도 +1" }
+];
+
+// ---------- 생성기 자동 업그레이드 ----------
+// 딜레이(초)마다 생성기/변환기 중 제일 싼 레벨을 자동 구매
+var AUTOUP = {
+  unlockCost: { 5: "1e18" },                       // 붕소
+  steps: [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1],
+  stepCostElem: 6,                                  // 탄소
+  stepCostBase: "1e25",
+  stepCostMult: 50
+};
+
+// ---------- 동위원소 (간접 보조 아이템, 중성자 소모) ----------
+var ISOTOPES = [
+  { id: "h2",   name: "중수소 ²H",     req: 2,  cost: { neutron: 5e3,  entropy: "5e5" },
+    desc: "원소 연구에 필요한 이전 원소 요구량 -25%" },
+  { id: "he3",  name: "헬륨-3 ³He",    req: 2,  cost: { neutron: 5e7,  entropy: "5e13" },
+    desc: "오프라인 최대 틱 ×4" },
+  { id: "h3",   name: "삼중수소 ³H",   req: 3,  cost: { neutron: 1e9,  entropy: "1e19" },
+    desc: "융합 강화 가격 상승률 -0.2" },
+  { id: "c14",  name: "탄소-14 ¹⁴C",   req: 6,  cost: { neutron: 1e12, entropy: "1e40" },
+    desc: "융합 강화 자동 구매 해금" },
+  { id: "n15",  name: "질소-15 ¹⁵N",   req: 7,  cost: { neutron: 5e9,  entropy: "1e30" },
+    desc: "원소 연구의 중성자 요구량 -50%" },
+  { id: "o18",  name: "산소-18 ¹⁸O",   req: 8,  cost: { neutron: 1e13, entropy: "1e45" },
+    desc: "원소 연구 E 비용 -30%" },
+  { id: "ne22", name: "네온-22 ²²Ne",  req: 10, cost: { neutron: 1e14, entropy: "1e52" },
+    desc: "생성기·변환기 가격 -30%" },
+  { id: "al26", name: "알루미늄-26 ²⁶Al", req: 13, cost: { neutron: 1e16, entropy: "1e70" },
+    desc: "자동 업그레이드 딜레이 -20%" },
+  { id: "k40",  name: "칼륨-40 ⁴⁰K",   req: 19, cost: { neutron: 1e20, entropy: "1e105" },
+    desc: "오프라인 최대 틱 ×2 (다른 효과와 중첩)" },
+  { id: "ti44", name: "티타늄-44 ⁴⁴Ti", req: 22, cost: { neutron: 5e23, entropy: "1e140" },
+    desc: "특수 연구 비용 -25%" },
+  { id: "fe56", name: "철-56 ⁵⁶Fe",    req: 26, cost: { neutron: 1e28, entropy: "1e200" },
+    desc: "항성 제작·레벨업 비용 -20%" },
+  { id: "fe60", name: "철-60 ⁶⁰Fe",    req: 26, cost: { neutron: 3e28, entropy: "1e205" },
+    desc: "행성 건설 비용 -25%" }
+];
+
+// ---------- 항성 ----------
+var STAR = {
+  recipe: { 1: "2e22", 2: "8e28", 6: "4e54", 7: "7e60", 8: "1e67", 10: "1e79", 14: "5e102", 26: "1e100" },
+  multBase: 10,          // E 배율 = 10 × 레벨^1.2 × 온도효율
+  starProdScale: 1e-10, // 원소 직접 생산 = 자연 보유량 스케일 × 이 값 × 레벨^1.2 × 온도효율
+  levelPow: 1.2,
+  levelCostFe: "1e195",
+  levelCostMult: 1.12,   // 행성들의 도움 없이는 365 도달 불가
+  maxLevel: 365,         // 태양 최대 레벨 (1년)
+  tempMin: 2000,
+  tempMax: 40000,        // KELT-9b 보유 시 +5000
+  tempDefault: 5778,
+  tempOptBase: 2500, tempOptStep: 1400, tempSigma: 9000,
+  effMin: 0.25, effAmp: 1.25,
+  solarLevel: 365
+};
+
+// ---------- 행성 (티어: 랜덤 → 태양계 → 커스텀 → 특이) ----------
+
+// 티어 1: 랜덤 행성 — 무작위 원소 하나 생산 ×3
+var RANDOM_PLANET = {
+  base: { 8: "1e66", 14: "1e103", 26: "1e190" },
+  costGrowth: 6,
+  bonus: 3,
+  max: 8            // 최대 보유 수
+};
+
+// 티어 3: 커스텀 행성
+var PLANET = {
+  researchCost: "1e215",
+  base: { 8: "1e71", 12: "1e96", 14: "1e108", 26: "1e198" },
+  extraScaleMult: 1e4,
+  costGrowth: 8,
+  gasBonus: 8,          // 기체 행성: 기체 원소 ×8
+  rockBonus: 8,         // 암석 행성: 고체 원소 ×8
+  waterBonus: 5,        // 물 행성: 모든 원소 ×5
+  baseLimit: 2          // 기본 한도 (특수 연구로 +3까지)
+};
+
+// 티어 4: 특이 행성 (실존 외계행성) — 청사진 구매 전엔 블라인드
+var EXOPLANETS = [
+  { id: "cancri", name: "55 Cancri e", nick: "다이아몬드 행성",
+    blueprint: { neutron: 1e29, entropy: "1e212" }, build: { 6: "1e46" },
+    lore: "표면이 다이아몬드로 덮인 초고밀도 행성.",
+    effect: "탄소 생산 ×25",
+    look: { type: "lava", colors: ["#e8d9c0", "#b0926a", "#fff6e0"] } },
+  { id: "hd189", name: "HD 189733 b", nick: "유리비의 행성",
+    blueprint: { neutron: 2e29, entropy: "1e216" }, build: { 14: "3e88" },
+    lore: "규소 유리 비가 초속 2km 옆바람으로 내리는 푸른 행성.",
+    effect: "규소 생산 ×25",
+    look: { type: "gas", colors: ["#2e6fd8", "#1a3f8f", "#8fc1ff"] } },
+  { id: "kepler", name: "Kepler-22b", nick: "바다 행성",
+    blueprint: { neutron: 5e29, entropy: "1e220" }, build: { 1: "1e17", 8: "8e56" },
+    lore: "행성 전체가 바다로 덮인 슈퍼지구.",
+    effect: "수소·산소 생산 ×25",
+    look: { type: "water", colors: ["#1e6fb8", "#0d4f8b", "#bfe8ff"] } },
+  { id: "tres", name: "TrES-2b", nick: "가장 어두운 행성",
+    blueprint: { neutron: 1e30, entropy: "1e224" }, build: { 6: "1e47", 7: "3e51" },
+    lore: "빛의 1%만 반사하는, 석탄보다 어두운 행성.",
+    effect: "오프라인 최대 틱 ×2",
+    look: { type: "dark", colors: ["#1a1420", "#0b0810", "#3d1f4f"] } },
+  { id: "gj", name: "GJ 1214 b", nick: "증기 행성",
+    blueprint: { neutron: 2e30, entropy: "1e228" }, build: { 1: "1e18", 8: "3e57" },
+    lore: "대기 전체가 뜨거운 수증기로 이루어진 물의 세계.",
+    effect: "수소·산소 생산 ×40",
+    look: { type: "ice", colors: ["#9fd8e8", "#5a9ab8", "#e8fbff"] } },
+  { id: "wasp", name: "WASP-12b", nick: "별에 먹히는 행성",
+    blueprint: { neutron: 5e30, entropy: "1e232" }, build: { 1: "1e18", 2: "1e23" },
+    lore: "항성에 흡수되며 계란형으로 찌그러진 최후의 행성.",
+    effect: "항성 배율 ×2",
+    look: { type: "hot", colors: ["#ff8c42", "#c1440e", "#ffd29d"] } },
+  { id: "psr", name: "PSR B1620-26 b", nick: "므두셀라",
+    blueprint: { neutron: 1e31, entropy: "1e236" }, build: { 6: "1e48", 26: "1e200" },
+    lore: "우주 나이의 대부분을 살아온 127억 년 된 최고령 행성.",
+    effect: "모든 원소 생산 ×10",
+    look: { type: "rock", colors: ["#8a7a5c", "#4f4638", "#c9b891"] } },
+  { id: "kelt", name: "KELT-9b", nick: "가장 뜨거운 행성",
+    blueprint: { neutron: 2e31, entropy: "1e240" }, build: { 1: "1e19", 26: "1e202" },
+    lore: "표면 4,300K — 웬만한 항성보다 뜨거워 대기가 증발 중인 행성.",
+    effect: "항성 온도 상한 +5,000K · 항성 배율 ×1.5",
+    look: { type: "hot", colors: ["#ffd9a0", "#e86a2a", "#fff2d0"] } },
+  { id: "rogue", name: "HD 106906 b", nick: "추방자",
+    blueprint: { neutron: 5e31, entropy: "1e244" }, build: { 7: "1e53", 26: "1e204" },
+    lore: "모항성에서 730AU 떨어져 홀로 떠도는 추방된 행성.",
+    effect: "랜덤 행성 보너스 ×3 → ×6",
+    look: { type: "dark", colors: ["#3a3550", "#1c1930", "#7a6fa8"] } }
+];
+
+// 티어 2: 태양계 행성 — 태양 Lv 365의 핵심 조력자
+var SOLAR_PLANETS = [
+  { id: "mercury", name: "수성", els: { 26: "1e197", 14: "3e89", 8: "8e57", 12: "1e79" },
+    boost: [26, 12], mult: 10, desc: "철·마그네슘 생산 ×10",
+    look: { type: "rock", colors: ["#9c9488", "#6e675e", "#c4bcae"] } },
+  { id: "venus", name: "금성", els: { 6: "1e47", 8: "8e57", 16: "5e99", 14: "3e89" },
+    boost: [16, 6], mult: 10, desc: "황·탄소 생산 ×10",
+    look: { type: "gas", colors: ["#e8c56f", "#c9a24a", "#f5e3b0"] } },
+  { id: "earth", name: "지구", els: { 8: "8e58", 14: "3e90", 13: "2e84", 26: "1e202", 7: "3e52", 1: "1e18" },
+    boost: "all", mult: 5, desc: "모든 원소 생산 ×5",
+    look: { type: "earth", colors: ["#2e6fd8", "#3f9142", "#e8e8e8"] } },
+  { id: "mars", name: "화성", els: { 26: "3e199", 8: "8e57", 14: "3e89", 6: "1e47" },
+    boost: [26, 14], mult: 10, desc: "철·규소 생산 ×10",
+    look: { type: "rock", colors: ["#c1552f", "#8f3a1e", "#e8a06e"] } },
+  { id: "jupiter", name: "목성", els: { 1: "1e19", 2: "1e24", 6: "1e47", 7: "3e52" },
+    boost: [1, 2], mult: 15, desc: "수소·헬륨 생산 ×15",
+    look: { type: "gas", colors: ["#d8a26a", "#a86e3f", "#f0d9b8"] } },
+  { id: "saturn", name: "토성", els: { 1: "8e18", 2: "8e23", 7: "3e52", 6: "1e47" },
+    boost: [1, 2], mult: 10, desc: "수소·헬륨 생산 ×10 (고리 보유)",
+    look: { type: "gas", colors: ["#e0c48f", "#bfa066", "#f2e2bd"], rings: true } },
+  { id: "uranus", name: "천왕성", els: { 1: "3e18", 2: "3e23", 6: "5e47", 7: "5e52", 8: "5e57" },
+    boost: [6, 7], mult: 10, desc: "탄소·질소 생산 ×10",
+    look: { type: "ice", colors: ["#7fd4d4", "#4fa8b8", "#c8f0f0"] } },
+  { id: "neptune", name: "해왕성", els: { 1: "3e18", 2: "3e23", 6: "8e47", 7: "8e52", 8: "8e57" },
+    boost: [7, 8], mult: 10, desc: "질소·산소 생산 ×10",
+    look: { type: "ice", colors: ["#2f5fd0", "#1a3a9c", "#7fa8f0"] } },
+  { id: "pluto", name: "명왕성", els: { 7: "1e53", 6: "5e47", 8: "3e57", 1: "1e18" },
+    boost: [7], mult: 20, desc: "질소 생산 ×20 (그래도 행성입니다)",
+    look: { type: "ice", colors: ["#c9b8a8", "#8f8070", "#e8dcc8"] } }
+];
+
+// ---------- 태양계 ----------
+var SOLAR_SYSTEM = { mult: "2e7" };
+
+// ---------- 시스템 ----------
+var SYSTEM = {
+  tickSeconds: 0.05,
+  offlineMaxTicks: 1e6,
+  autosaveSeconds: 30
+};

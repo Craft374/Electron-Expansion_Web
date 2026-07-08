@@ -1,0 +1,489 @@
+/* ============================================================
+   style.css — 다크 SF 대시보드 (사이드바 + 패널)
+   ============================================================ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #070b12;
+  --bg2: #0a101c;
+  --panel: rgba(13, 20, 34, 0.85);
+  --line: rgba(90, 170, 235, 0.28);
+  --line-soft: rgba(90, 170, 235, 0.14);
+  --text: #dbe7f4;
+  --dim: #7f90a8;
+  --cyan: #6fd3ff;
+  --cyan-soft: rgba(111, 211, 255, 0.12);
+  --purple: #b98af7;
+  --purple-line: rgba(185, 138, 247, 0.4);
+  --green: #6fe3a1;
+  --red: #ff8080;
+}
+
+.hidden { display: none !important; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* 배경 장식: 궤도 원 + 희미한 수식 */
+body::before {
+  content: "";
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(circle at 88% 10%, transparent 118px, var(--line-soft) 119px, transparent 120px),
+    radial-gradient(circle at 88% 10%, transparent 78px, var(--line-soft) 79px, transparent 80px),
+    radial-gradient(circle at 90% 92%, transparent 148px, var(--line-soft) 149px, transparent 150px),
+    radial-gradient(circle at 90% 92%, transparent 98px, var(--line-soft) 99px, transparent 100px),
+    radial-gradient(ellipse at 30% 0%, rgba(40, 80, 140, 0.12), transparent 60%),
+    linear-gradient(180deg, var(--bg2), var(--bg));
+  pointer-events: none;
+  z-index: 0;
+}
+body::after {
+  content: "dEᴱ = k · E^α          log₁₀(N) = Σᵢ ln aᵢ + Σ la₁₀";
+  position: fixed;
+  top: 12px; right: 24px;
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: 13px;
+  color: rgba(150, 190, 230, 0.14);
+  pointer-events: none;
+  z-index: 0;
+}
+
+#app { display: flex; position: relative; z-index: 1; min-height: 100vh; }
+
+/* ============ 사이드바 ============ */
+#sidebar {
+  width: 200px;
+  min-height: 100vh;
+  border-right: 1px solid var(--line-soft);
+  background: rgba(8, 13, 22, 0.7);
+  display: flex;
+  flex-direction: column;
+  padding: 18px 12px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+#logo {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 8px 22px;
+}
+.logo-mark {
+  width: 44px; height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--cyan);
+  font-size: 17px;
+  position: relative;
+  background: radial-gradient(circle at 35% 35%, rgba(111,211,255,0.2), transparent 70%);
+}
+.logo-mark::before {
+  content: "";
+  position: absolute; inset: -6px;
+  border: 1px dashed rgba(111, 211, 255, 0.25);
+  border-radius: 50%;
+  animation: spin 24s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.logo-name { font-size: 13px; font-weight: 700; line-height: 1.3; letter-spacing: 0.5px; color: #b8ccdf; }
+
+#side-nav { display: flex; flex-direction: column; gap: 4px; }
+
+.side-btn {
+  display: flex; align-items: center; gap: 12px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--dim);
+  font-family: inherit;
+  font-size: 14px;
+  padding: 12px 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+.side-btn .ic { font-size: 15px; width: 20px; text-align: center; }
+.side-btn:hover { color: var(--text); background: rgba(111, 211, 255, 0.06); }
+.side-btn.active {
+  color: var(--cyan);
+  background: var(--cyan-soft);
+  border-color: var(--line);
+  box-shadow: inset 3px 0 0 var(--cyan);
+}
+
+#version { margin-top: auto; font-size: 12px; color: var(--dim); padding: 8px; }
+
+/* ============ 메인 ============ */
+#content {
+  flex: 1;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 넓은 화면에서 한쪽으로 쏠리지 않게 중앙 정렬 */
+.tab-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ============ 패널 ============ */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px 22px;
+  position: relative;
+  box-shadow: 0 0 24px rgba(30, 90, 160, 0.07);
+}
+.panel.purple { border-color: var(--purple-line); }
+
+.panel-head {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 17px; font-weight: 700;
+  margin-bottom: 14px;
+}
+.dots {
+  width: 14px; height: 14px; position: relative; flex-shrink: 0;
+}
+.dots::before {
+  content: "";
+  position: absolute; top: 1px; left: 1px;
+  width: 4px; height: 4px;
+  background: var(--cyan);
+  border-radius: 1px;
+  box-shadow: 8px 0 var(--cyan), 0 8px var(--cyan), 8px 8px rgba(111, 211, 255, 0.4);
+}
+.dots.purple::before {
+  background: var(--purple);
+  box-shadow: 8px 0 var(--purple), 0 8px var(--purple), 8px 8px rgba(185, 138, 247, 0.4);
+}
+
+.panel-sub { font-size: 13px; color: var(--dim); line-height: 1.65; margin-bottom: 14px; }
+.hint { font-size: 12px; color: var(--dim); margin-top: 8px; line-height: 1.5; }
+.divider { height: 1px; background: var(--line-soft); margin: 14px 0; }
+.kv { font-size: 14px; margin-bottom: 8px; color: #b9c8da; }
+.kv span { color: var(--text); font-weight: 600; }
+
+/* ============ 히어로 (엔트로피 표시) ============ */
+.hero-panel { padding-bottom: 26px; }
+.hero-center { text-align: center; padding: 12px 0 6px; }
+.hero-label { font-size: 16px; color: #c4d3e4; }
+.hero-num {
+  font-size: 58px;
+  font-weight: 800;
+  color: #f2f7fc;
+  letter-spacing: 1px;
+  text-shadow: 0 0 30px rgba(111, 211, 255, 0.35);
+  line-height: 1.25;
+}
+.hero-unit { font-size: 34px; margin-left: 6px; color: #cfe3f4; }
+.hero-info { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+.hero-line { font-size: 13.5px; color: var(--dim); }
+.hero-line span { color: var(--text); }
+.hero-line.goal span { color: var(--cyan); }
+
+.corner-btn { position: absolute; right: 22px; bottom: 22px; }
+
+/* ============ 버튼 ============ */
+.btn {
+  background: rgba(111, 211, 255, 0.06);
+  border: 1px solid var(--line);
+  color: var(--cyan);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13.5px;
+  padding: 9px 18px;
+  cursor: pointer;
+  transition: all 0.13s;
+}
+.btn:hover:not(:disabled) { background: rgba(111, 211, 255, 0.14); box-shadow: 0 0 12px rgba(111, 211, 255, 0.2); }
+.btn:active:not(:disabled) { transform: scale(0.98); }
+.btn:disabled { opacity: 0.32; cursor: not-allowed; }
+
+.big-accent { padding: 12px 26px; font-size: 14.5px; font-weight: 600; }
+.big-purple {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--purple);
+  border-color: var(--purple-line);
+  background: rgba(185, 138, 247, 0.07);
+  border-radius: 10px;
+  margin-top: 14px;
+}
+.big-purple:hover:not(:disabled) { background: rgba(185, 138, 247, 0.15); box-shadow: 0 0 16px rgba(185, 138, 247, 0.25); }
+
+.btn.danger { color: var(--red); border-color: rgba(255, 128, 128, 0.4); background: rgba(255, 90, 90, 0.05); }
+.btn.dev-speed.on { background: rgba(111, 211, 255, 0.22); font-weight: 700; }
+
+.btn-row { display: flex; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+
+.check {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13.5px; color: #b9c8da;
+  margin: 10px 0; cursor: pointer;
+}
+.check input { accent-color: var(--cyan); width: 16px; height: 16px; }
+
+input[type="number"] {
+  background: rgba(10, 18, 30, 0.9);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: inherit;
+  font-size: 13.5px;
+  width: 160px;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--cyan);
+  margin: 10px 0 2px;
+}
+
+/* ============ 생성기 줄 ============ */
+.gen-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 4px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.gen-row:last-child { border-bottom: none; }
+.gen-info { flex: 1; min-width: 0; }
+.gen-name { font-size: 14.5px; font-weight: 700; }
+.gen-name small { color: var(--dim); font-weight: 400; margin-left: 8px; }
+.gen-stat { font-size: 12.5px; color: var(--dim); margin-top: 3px; }
+.gen-stat b { color: var(--cyan); font-weight: 600; }
+.gen-btns { display: flex; flex-direction: column; gap: 6px; min-width: 240px; }
+.gen-btns .btn { width: 100%; font-size: 12.5px; padding: 8px 12px; }
+.btn.ghost { background: transparent; border-color: var(--line-soft); color: #b9c8da; }
+.btn.ghost:hover:not(:disabled) { border-color: var(--cyan); color: var(--cyan); }
+.check.sm { font-size: 12px; margin: 8px 0 0; }
+.check.sm input { width: 14px; height: 14px; }
+
+/* ============ 업그레이드 4종 그리드 ============ */
+.upgrade-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+.upgrade-grid .panel { padding: 16px 18px; }
+.upgrade-grid .panel-head { font-size: 15px; margin-bottom: 10px; }
+.upgrade-grid .kv { font-size: 13px; margin-bottom: 6px; }
+
+/* ============ 행성 부속 ============ */
+.row-flex { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
+.built-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.head-tag {
+  font-size: 12px; color: var(--dim); font-weight: 400;
+  border: 1px solid var(--line-soft); border-radius: 12px;
+  padding: 2px 10px; margin-left: 8px;
+}
+.built-planet {
+  position: relative;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--dim);
+  line-height: 1.4;
+}
+.built-planet .tip {
+  display: none;
+  position: absolute;
+  bottom: 102%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 12px;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 12px;
+  z-index: 20;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+}
+.built-planet:hover .tip { display: block; }
+.built-planet .del-btn {
+  position: absolute;
+  top: -4px; right: -4px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,128,128,0.5);
+  background: rgba(20,10,14,0.9);
+  color: var(--red);
+  font-size: 10px;
+  cursor: pointer;
+  z-index: 10;
+  display: none;
+}
+.built-planet:hover .del-btn { display: block; }
+.planet-card.blind { border-style: dashed; }
+.planet-card.blind .planet-name { color: var(--purple); letter-spacing: 3px; }
+.planet-effect { font-size: 12px; color: var(--purple); margin-bottom: 8px; font-weight: 600; }
+
+/* ============ 원소 그리드 ============ */
+#elem-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 9px;
+}
+.elem-tile {
+  border: 1px solid var(--line-soft);
+  border-left: 3px solid;
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: rgba(10, 16, 27, 0.6);
+}
+.elem-head { display: flex; align-items: baseline; gap: 7px; }
+.elem-sym { font-size: 15px; font-weight: 800; }
+.elem-name { font-size: 12px; color: var(--dim); flex: 1; }
+.elem-fusion { font-size: 10.5px; color: var(--purple); }
+.elem-amt { font-size: 14.5px; font-weight: 600; margin-top: 3px; }
+.elem-rate { font-size: 11.5px; color: var(--dim); }
+
+/* 비용 표시 */
+.cost-line { font-size: 13px; line-height: 1.8; margin: 8px 0; }
+.cost-item { white-space: nowrap; }
+.cost-item.ok { color: var(--green); }
+.cost-item.no { color: var(--red); }
+.cost-sep { color: var(--dim); margin: 0 6px; }
+
+.research-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.research-title .sym { color: var(--cyan); }
+
+/* ============ 동위원소 ============ */
+#iso-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.iso-card {
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  padding: 14px 16px;
+  background: rgba(10, 16, 27, 0.6);
+}
+.iso-name { font-size: 14.5px; font-weight: 700; margin-bottom: 5px; }
+.iso-desc { font-size: 12.5px; color: var(--dim); line-height: 1.5; margin-bottom: 9px; }
+.iso-card .btn { width: 100%; }
+.iso-card.owned { border-color: rgba(111, 227, 161, 0.35); }
+.iso-owned-tag { color: var(--green); font-size: 13px; font-weight: 600; text-align: center; padding: 8px; }
+
+/* ============ 항성/행성 ============ */
+.star-view {
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(10, 16, 30, 0.9), rgba(5, 8, 14, 0.95));
+  min-height: 300px;
+}
+.star-view canvas { max-width: 100%; }
+
+#star-recipe { margin: 12px 0; }
+.recipe-row {
+  display: flex; justify-content: space-between;
+  font-size: 13.5px;
+  padding: 6px 2px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.recipe-row:last-child { border-bottom: none; }
+.recipe-row .have { color: var(--dim); font-size: 12.5px; }
+
+#solar-planet-grid, #exo-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(225px, 1fr));
+  gap: 12px;
+}
+.planet-card {
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  padding: 13px;
+  background: rgba(10, 16, 27, 0.6);
+  text-align: center;
+  overflow: hidden;
+}
+.planet-cost .cost-item { white-space: normal; }
+.planet-card canvas { display: block; margin: 0 auto 6px; }
+.planet-name { font-size: 14.5px; font-weight: 700; }
+.planet-nick { font-size: 11.5px; color: var(--purple); margin-bottom: 4px; }
+.planet-desc { font-size: 11.5px; color: var(--dim); line-height: 1.5; margin-bottom: 8px; }
+.planet-cost { font-size: 11.5px; line-height: 1.7; margin-bottom: 8px; }
+.planet-card .btn { width: 100%; font-size: 12.5px; padding: 8px; }
+.planet-card.owned { border-color: rgba(111, 227, 161, 0.35); }
+
+#custom-chips { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0; }
+.chip {
+  border: 1px solid var(--line-soft);
+  border-radius: 20px;
+  padding: 5px 13px;
+  font-size: 12.5px;
+  cursor: pointer;
+  color: var(--dim);
+  background: rgba(10, 16, 27, 0.6);
+  transition: all 0.12s;
+  font-family: inherit;
+}
+.chip:hover { color: var(--text); }
+.chip.sel { color: var(--cyan); border-color: var(--cyan); background: var(--cyan-soft); }
+.chip .gas-tag { font-size: 10px; opacity: 0.7; }
+
+#custom-built { display: flex; flex-wrap: wrap; gap: 12px; }
+.built-planet { text-align: center; font-size: 12px; color: var(--dim); }
+
+/* ============ 도움말 ============ */
+.help-text p { font-size: 13.5px; color: #b9c8da; line-height: 1.75; margin-bottom: 13px; }
+.help-text b { color: var(--cyan); }
+
+/* ============ 오프라인 토스트 ============ */
+#offline-toast {
+  position: fixed;
+  top: 18px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--panel);
+  border: 1px solid var(--cyan);
+  border-radius: 10px;
+  padding: 14px 20px;
+  z-index: 100;
+  display: flex; align-items: center; gap: 16px;
+  font-size: 13.5px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+  max-width: 92vw;
+  backdrop-filter: blur(6px);
+}
+#offline-toast button {
+  background: var(--cyan-soft);
+  border: 1px solid var(--line);
+  color: var(--cyan);
+  border-radius: 7px;
+  padding: 7px 15px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+/* ============ 반응형 ============ */
+@media (max-width: 900px) {
+  .row-2 { grid-template-columns: 1fr; }
+  #sidebar { width: 64px; }
+  #sidebar .logo-name, #sidebar .side-btn span:not(.ic) { display: none; }
+  .side-btn { justify-content: center; padding: 12px 0; }
+  .hero-num { font-size: 40px; }
+}

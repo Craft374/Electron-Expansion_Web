@@ -1,0 +1,14 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# 에디터
+.vscode/
+.idea/
+*.swp
+
+# Claude Code 로컬 설정 (개인 dev 서버 실행 설정 등)
+.claude/
+
+# 로그/임시 파일
+*.log
