@@ -333,7 +333,7 @@ var ACHIEVEMENTS = [
 
   { id: "b1", row: "B", name: "전자가 부족해!", icon: "⚡", cond: "전자 변환속도가 생산속도보다 빠르게 하세요.",
     eff: "", check: function () { return state.convLevels.electron >= 1 && convRate("electron").gt(genRate("electron")); } },
-  { id: "b2", row: "B", name: "실버튄버", icon: "🥈", cond: "전자·양성자·중성자를 각 1e6개 이상 보유하세요.",
+  { id: "b2", row: "B", name: "실버튼버", icon: "🥈", cond: "전자·양성자·중성자를 각 1e6개 이상 보유하세요.",
     eff: "전자 생산 ×1.05", check: function () {
       return state.particles.electron.gte(1e6) && state.particles.proton.gte(1e6) && state.particles.neutron.gte(1e6);
     } },
@@ -363,7 +363,7 @@ var ACH_ROWS = [
 var SACRIFICE = {
   reqResearched: 5,       // 붕소 이후
   recoverySeconds: 30,    // 생산이 0 → 원상복구까지
-  gainCoef: 0.005         // 배율 획득 계수 (매우 약함 — 초당 E log10에 비례)
+  gainCoef: 0.002         // 배율 획득 계수 (매우 약함 — 초당 E log10에 비례)
 };
 
 // ---------- 자동화 ----------

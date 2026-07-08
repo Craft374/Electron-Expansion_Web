@@ -78,22 +78,16 @@ body::after {
   padding: 6px 8px 22px;
 }
 .logo-mark {
-  width: 44px; height: 44px;
-  border: 1px solid var(--line);
-  border-radius: 50%;
+  width: 46px; height: 46px;
+  border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
-  color: var(--cyan);
-  font-size: 17px;
   position: relative;
-  background: radial-gradient(circle at 35% 35%, rgba(111,211,255,0.2), transparent 70%);
+  background: #fff;
+  box-shadow: 0 0 14px rgba(111, 211, 255, 0.22);
+  overflow: hidden;
+  flex-shrink: 0;
 }
-.logo-mark::before {
-  content: "";
-  position: absolute; inset: -6px;
-  border: 1px dashed rgba(111, 211, 255, 0.25);
-  border-radius: 50%;
-  animation: spin 24s linear infinite;
-}
+.logo-img { width: 100%; height: 100%; object-fit: contain; display: block; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .logo-name { font-size: 13px; font-weight: 700; line-height: 1.3; letter-spacing: 0.5px; color: #b8ccdf; }
 
@@ -478,12 +472,6 @@ input[type="range"] {
   font-family: inherit;
   white-space: nowrap;
 }
-
-/* ============ 로고 SVG ============ */
-.logo-svg { width: 34px; height: 34px; overflow: visible; }
-.logo-svg ellipse { fill: none; stroke: var(--cyan); stroke-width: 1.4; opacity: 0.75; }
-.logo-svg .logo-nucleus { fill: var(--cyan); }
-.logo-svg .logo-e { fill: #eaf6ff; }
 
 /* ============ 사이드바 자원 표시 ============ */
 #side-res { display: flex; flex-direction: column; gap: 4px; padding: 0 8px 14px; }

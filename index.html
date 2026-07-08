@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Electron Expansion</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -20,14 +22,7 @@
     <!-- ===== 사이드바 ===== -->
     <aside id="sidebar">
       <div id="logo">
-        <div class="logo-mark">
-          <svg viewBox="0 0 40 40" class="logo-svg" aria-hidden="true">
-            <ellipse cx="20" cy="20" rx="16" ry="6.5" transform="rotate(30 20 20)"/>
-            <ellipse cx="20" cy="20" rx="16" ry="6.5" transform="rotate(-30 20 20)"/>
-            <circle class="logo-nucleus" cx="20" cy="20" r="4"/>
-            <circle class="logo-e" cx="33" cy="13.5" r="2.4"/>
-          </svg>
-        </div>
+        <div class="logo-mark"><img src="EE_Logo.png" alt="Electron Expansion" class="logo-img"></div>
         <div class="logo-name">Electron<br>Expansion</div>
       </div>
 
@@ -96,6 +91,7 @@
         <div class="panel">
           <div class="panel-head"><span class="dots"></span>자동화 장치</div>
           <div class="panel-sub">생성기·변환기·원소 업그레이드를 자동으로 구매합니다. 각 항목마다 딜레이를 단축할 수 있고(최소 0초 = 상시), 개별로 껐다 켤 수 있습니다. 단축 비용은 원소로 지불하며, 끝까지 단축하려면 무거운 원소가 필요합니다.</div>
+          <div class="btn-row"><button class="btn" id="btn-auto-all-max">전체 최대 단축</button></div>
           <div id="auto-list"></div>
         </div>
       </section>

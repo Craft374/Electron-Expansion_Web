@@ -807,11 +807,13 @@ function buildAuto() {
       '<label class="switch"><input type="checkbox" id="auto-on-' + t.key + '"> 가동</label></div>' +
       '<div class="ac-delay">딜레이 <b id="auto-delay-' + t.key + '"></b> · <span id="auto-lvtxt-' + t.key + '"></span></div>' +
       '<div class="cost-line" id="auto-cost-' + t.key + '"></div>' +
-      '<button class="btn" id="auto-step-' + t.key + '">단축</button></div>';
+      '<div class="btn-row"><button class="btn" id="auto-step-' + t.key + '">단축</button>' +
+      '<button class="btn" id="auto-max-' + t.key + '">최대</button></div></div>';
   }).join("") || '<div class="panel-sub">아직 자동화할 항목이 없습니다.</div>';
   vis.forEach(function (t) {
     el("auto-on-" + t.key).onchange = function () { state.autos[t.key].on = this.checked; };
     el("auto-step-" + t.key).onclick = function () { buyAutoStep(t.key); updateUI(); };
+    el("auto-max-" + t.key).onclick = function () { buyAutoStepMax(t.key); updateUI(); };
   });
 }
 
@@ -823,14 +825,16 @@ function updateAuto() {
     var d = autoDelay(a.level);
     el("auto-delay-" + t.key).textContent = d <= 0 ? "상시(0초)" : d.toFixed(2) + "초";
     el("auto-lvtxt-" + t.key).textContent = "단축 " + a.level + " / " + AUTO_MAX_LEVEL;
-    var stepEl = el("auto-step-" + t.key), costEl = el("auto-cost-" + t.key);
+    var stepEl = el("auto-step-" + t.key), costEl = el("auto-cost-" + t.key), maxEl = el("auto-max-" + t.key);
     if (a.level >= AUTO_MAX_LEVEL) {
       costEl.innerHTML = '<span class="cost-item ok">최대 단축 (상시)</span>';
       stepEl.disabled = true;
+      if (maxEl) maxEl.disabled = true;
     } else {
       var c = autoStepCost(a.level);
       costEl.innerHTML = costHTML(c);
       stepEl.disabled = !canAfford(c);
+      if (maxEl) maxEl.disabled = !canAfford(c);
     }
     var chk = el("auto-on-" + t.key);
     if (chk.checked !== a.on) chk.checked = a.on;
@@ -953,6 +957,9 @@ function initUI() {
   el("btn-sacrifice").onclick = function () {
     if (doSacrifice()) updateUI();
   };
+
+  // 자동화: 전체 최대 단축
+  el("btn-auto-all-max").onclick = function () { buyAllAutoMax(); updateUI(); };
 
   // 설정: 사이드바 표시 옵션
   buildSideResOpts();

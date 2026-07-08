@@ -601,6 +601,22 @@ function buyAutoStep(key) {
   return false;
 }
 
+// 한 항목의 단축을 살 수 있는 만큼 전부
+function buyAutoStepMax(key) {
+  var n = 0;
+  while (n < 100 && buyAutoStep(key)) n++;
+  return n;
+}
+
+// 보이는 모든 자동화 항목을 한 번에 최대 단축
+function buyAllAutoMax() {
+  var total = 0;
+  AUTO_TARGETS.forEach(function (t) {
+    if (autoTargetVisible(t)) total += buyAutoStepMax(t.key);
+  });
+  return total;
+}
+
 function autoBuyTarget(t) {
   if (t.kind === "gen") return buyGenerator(t.p);
   if (t.kind === "conv") return buyConverter(t.p);
