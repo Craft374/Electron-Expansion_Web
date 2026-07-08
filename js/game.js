@@ -605,11 +605,12 @@ function autoDelay(level) {
   return d;
 }
 
-// 단축 비용: 지금 보유 중인 "최신(가장 무거운) 원소"의 자연보유량 일부.
-// 진행 단계에 맞춰 값이 오르므로 그 시점에 감당 가능하고, 초반에 바로 열린다.
+// 단축 비용: 레벨에 따라 초기 원소(H~B)를 소량 요구.
+// 요구 원소는 레벨로만 결정되므로, 새 원소를 연구해도 비용이 바뀌지 않는다.
 function autoStepCost(level) {
-  var e = Math.max(1, state.researched);
-  var amt = D(ELEM_SCALE[e - 1]).mul(AUTO_STEP_BASE_FRAC).mul(Decimal.pow(AUTO_STEP_GROW, level));
+  var e = Math.min(AUTO_COST_MAX_ELEM,
+    1 + Math.floor(level * AUTO_COST_MAX_ELEM / AUTO_DELAYS.length));
+  var amt = D(AUTO_STEP_BASE).mul(Decimal.pow(AUTO_STEP_GROW, level));
   var cost = { elements: {} };
   cost.elements[e] = amt;
   return cost;
