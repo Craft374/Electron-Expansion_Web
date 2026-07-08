@@ -239,15 +239,32 @@ function convRate(key) {
   return D(CONVERTERS[key].base).mul(Decimal.pow(CONV_RATE_GROW, lv - 1));
 }
 
+// 원소 기본 시드 (수소 선속·촉매 반영)
+function elementSeed() {
+  var s = D(ELEM.h_base).mul(Decimal.pow(TRACKS.hflux.effect, state.tracks.hflux));
+  if (state.special.catalyst) s = s.mul(5);
+  return s;
+}
+
+// 압축 업그레이드로 강화되는 "원소 자기생산" 계수 (없으면 0)
+function compSelfRate() {
+  return state.compression ? D(state.compression.selfRate || 0) : D(0);
+}
+
 function elementProdRate(n) {
   if (state.researched < n) return D(0);
   var base;
-  if (n === 1) {
-    base = D(ELEM.h_base).mul(Decimal.pow(TRACKS.hflux.effect, state.tracks.hflux));
-    if (state.special.catalyst) base = base.mul(5);
+  if (state.star) {
+    // 항성 이후: 정방향 캐스케이드 (낮은 원소 → 높은 원소). 철 수급 가능.
+    if (n === 1) base = elementSeed();
+    else base = state.elements[n - 2].mul(ELEM.cascade);
   } else {
-    base = state.elements[n - 2].mul(ELEM.cascade);
+    // 항성 이전: 역방향. 원자번호가 클수록 시드가 작고, 위 원소가 아래 원소를 생산.
+    base = elementSeed().mul(Decimal.pow(ELEM.revDecay, n - 1));
+    if (n < state.researched) base = base.add(state.elements[n].mul(ELEM.cascade));
   }
+  // 압축 업그레이드: 각 원소가 자기 자신을 추가 생산
+  base = base.add(state.elements[n - 1].mul(compSelfRate()));
   return base.mul(elementMult(n)).add(starProdRate(n));
 }
 
@@ -315,11 +332,13 @@ function tick(dt) {
     gainEntropy(amt.mul(CONVERTERS[k].value).mul(achEntropyMult()));
   });
 
-  // 3. 원소 연쇄 생산
+  // 3. 원소 연쇄 생산 (항성 이전에는 1.8e308 상한)
   var prods = [];
   for (var n = 1; n <= state.researched; n++) prods[n] = elementProdRate(n);
+  var capped = !state.star;
   for (n = 1; n <= state.researched; n++) {
     state.elements[n - 1] = state.elements[n - 1].add(prods[n].mul(dt));
+    if (capped && state.elements[n - 1].gt(ELEM.cap)) state.elements[n - 1] = D(ELEM.cap);
   }
 
   // 4. 원소의 E 생산
