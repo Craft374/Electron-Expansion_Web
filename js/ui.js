@@ -213,9 +213,12 @@ function updateGens() {
     var owned = state.convLevels[k] >= 1;
     setHidden("conv-line-" + k, !owned);
     if (owned) {
-      el("conv-stat-" + k).textContent =
-        "자동 변환: 초당 " + format(convRate(k), 1) + "개 → " +
-        format(convRate(k).mul(CONVERTERS[k].value), 1) + " E";
+      // "→"를 다음 업그레이드 값으로 오해하지 않도록 명확히 표기하고, 다음 레벨 처리량을 함께 표시
+      var eOut = convRate(k).mul(CONVERTERS[k].value);
+      var nextConv = convRate(k).mul(CONV_RATE_GROW);
+      el("conv-stat-" + k).innerHTML =
+        "자동 변환 처리량: 초당 <b>" + format(convRate(k), 1) + "</b>개 (= " + format(eOut, 1) + " E)" +
+        ' <span style="color:var(--dim)">· 다음 레벨 초당 ' + format(nextConv, 1) + "개</span>";
       var chk = el("conv-on-" + k);
       if (chk.checked !== state.convOn[k]) chk.checked = state.convOn[k];
     }
