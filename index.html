@@ -259,6 +259,37 @@
 
       <!-- 행성 -->
       <section id="tab-planets" class="tab-page hidden">
+
+        <div class="hidden" id="planet-detail">
+          <button class="btn" id="btn-planet-back" style="margin-bottom:12px">← 행성 목록</button>
+          <div class="row-2">
+            <div class="panel star-view" style="min-height:340px">
+              <canvas id="cv-planet-detail" width="380" height="340"></canvas>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><span class="dots"></span><span id="pd-name"></span></div>
+              <div class="planet-nick" id="pd-nick" style="margin-bottom:10px"></div>
+              <div class="panel-sub" id="pd-lore"></div>
+              <div id="pd-solar" class="hidden">
+                <div class="kv">성장 레벨: <span id="pd-level"></span></div>
+                <div class="kv">현재 부양: <span id="pd-boost"></span></div>
+                <div class="kv">레벨업 비용: <span id="pd-cost"></span></div>
+                <div class="btn-row">
+                  <button class="btn" id="pd-levelup">성장</button>
+                  <button class="btn" id="pd-levelup-max">최대</button>
+                </div>
+                <div class="divider"></div>
+                <div class="kv">미션: <span id="pd-mission"></span></div>
+                <button class="btn" id="pd-mission-claim">미션 보상 수령 (부양 ×5)</button>
+              </div>
+              <div id="pd-exo" class="hidden">
+                <div class="planet-effect" id="pd-effect"></div>
+                <div class="hint">특이 행성은 외계 항성계의 잔재입니다. 지금은 관측만 가능합니다.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="panel" id="planet-tier1">
           <div class="panel-head"><span class="dots"></span>티어 1 — 랜덤 행성</div>
           <div class="panel-sub">우주의 먼지를 뭉쳐 행성을 만듭니다. 어떤 원소가 강화될지는 만들어봐야 압니다. (최대 <span id="txt-random-max"></span>개)</div>

@@ -31,7 +31,7 @@ function freshState() {
       return o;
     })(),
     star: null,
-    planets: { random: [], custom: [], special: {}, blueprints: {}, solar: {} },
+    planets: { random: [], custom: [], special: {}, blueprints: {}, solar: {}, solarLevels: {}, solarMissions: {} },
     planetResearched: false,
     solarSystem: false,
     settings: {
@@ -174,6 +174,60 @@ function starEMult(n) {
   return Decimal.max(m, 1);
 }
 
+// ---- 태양계 행성 성장·미션 (§6) ----
+function solarPlanetLevel(id) { return state.planets.solarLevels[id] || 0; }
+function findSolarPlanet(id) {
+  for (var i = 0; i < SOLAR_PLANETS.length; i++) if (SOLAR_PLANETS[i].id === id) return SOLAR_PLANETS[i];
+  return null;
+}
+// 행성 부양 배율 = 기본 × 성장^레벨 × (미션 완료 시 ×missionMult)
+function solarPlanetBoost(p) {
+  var b = D(p.mult).mul(Decimal.pow(PLANET_GROWTH.boostGrow, solarPlanetLevel(p.id)));
+  if (state.planets.solarMissions[p.id]) b = b.mul(PLANET_GROWTH.missionMult);
+  return b;
+}
+function solarPlanetLevelCost(id) {
+  var p = findSolarPlanet(id), lv = solarPlanetLevel(id);
+  var cost = { elements: {} };
+  for (var n in p.els) {
+    cost.elements[n] = D(p.els[n]).mul(PLANET_GROWTH.costFrac).mul(Decimal.pow(PLANET_GROWTH.costMult, lv)).ceil();
+  }
+  return cost;
+}
+function buySolarPlanetLevel(id) {
+  if (!state.planets.solar[id]) return false;
+  if (pay(solarPlanetLevelCost(id))) {
+    state.planets.solarLevels[id] = solarPlanetLevel(id) + 1;
+    return true;
+  }
+  return false;
+}
+// 행성 미션: 대표 원소를 목표량 이상 보유
+function solarPlanetMission(p) {
+  var elem = (p.boost === "all") ? 8 : p.boost[0];
+  return { elem: elem, target: D(ELEM_SCALE[elem - 1]).mul(10) };
+}
+function solarMissionReady(id) {
+  if (state.planets.solarMissions[id] || !state.planets.solar[id]) return false;
+  var p = findSolarPlanet(id), ms = solarPlanetMission(p);
+  return state.elements[ms.elem - 1].gte(ms.target);
+}
+function claimSolarMission(id) {
+  if (!solarMissionReady(id)) return false;
+  state.planets.solarMissions[id] = true;
+  return true;
+}
+
+// 채굴: 랜덤·커스텀 행성이 그 원소를 매초 일정 비율 추가 생산
+function miningRate(n) {
+  var r = 0;
+  state.planets.random.forEach(function (p) { if (p.elem === n) r += PLANET_MINE.randomRate; });
+  state.planets.custom.forEach(function (p) {
+    if (p.extras && p.extras.indexOf(n) >= 0) r += PLANET_MINE.customRate;
+  });
+  return r;
+}
+
 function planetMult(n) {
   var m = D(1);
   // 랜덤 행성
@@ -181,6 +235,11 @@ function planetMult(n) {
   state.planets.random.forEach(function (p) {
     if (p.elem === n) m = m.mul(rBonus);
   });
+  // 시너지 (세트 보너스)
+  if (state.planets.random.length >= 4) m = m.mul(PLANET_SYNERGY.random4);
+  var sc = solarPlanetCount();
+  if (sc >= 5) m = m.mul(PLANET_SYNERGY.solar5);
+  if (sc >= SOLAR_PLANETS.length) m = m.mul(PLANET_SYNERGY.solar9);
   // 커스텀 행성
   var gas = 0, rock = 0, water = 0;
   state.planets.custom.forEach(function (p) {
@@ -198,10 +257,10 @@ function planetMult(n) {
   if (sp.kepler && (n === 1 || n === 8)) m = m.mul(25);
   if (sp.gj && (n === 1 || n === 8)) m = m.mul(40);
   if (sp.psr) m = m.mul(10);
-  // 태양계 행성
+  // 태양계 행성 (성장·미션 반영)
   SOLAR_PLANETS.forEach(function (p) {
     if (!state.planets.solar[p.id]) return;
-    if (p.boost === "all" || p.boost.indexOf(n) >= 0) m = m.mul(p.mult);
+    if (p.boost === "all" || p.boost.indexOf(n) >= 0) m = m.mul(solarPlanetBoost(p));
   });
   return m;
 }
@@ -425,8 +484,8 @@ function elementProdRate(n) {
     base = elementSeed().mul(Decimal.pow(ELEM.revDecay, n - 1));
     if (n < state.researched) base = base.add(state.elements[n].mul(ELEM.cascade));
   }
-  // 압축 업그레이드: 각 원소가 자기 자신을 추가 생산
-  base = base.add(state.elements[n - 1].mul(compSelfRate()));
+  // 압축 업그레이드 + 행성 채굴: 각 원소가 자기 자신을 추가 생산
+  base = base.add(state.elements[n - 1].mul(compSelfRate().add(miningRate(n))));
   return base.mul(elementMult(n)).add(starProdRate(n));
 }
 

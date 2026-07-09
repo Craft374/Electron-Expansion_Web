@@ -252,15 +252,18 @@ function drawStar(cv, temp, level, t) {
 // 행성
 // ============================================================
 // look: { type, colors: [메인, 어두움, 밝음/대기], rings }
-function drawPlanet(cv, look, t, seed) {
+function drawPlanet(cv, look, t, seed, cam) {
   var ctx = cv.getContext("2d");
   var w = cv.width, h = cv.height;
   ctx.clearRect(0, 0, w, h);
   var cx = w / 2, cy = h / 2;
-  var R = Math.min(w, h) * 0.33;
+  cam = cam || {};
+  var rx = cam.rx || 0, ry = cam.ry || 0, hov = cam.hover || 0;   // 호버 카메라
+  var R = Math.min(w, h) * 0.33 * (1 + hov * 0.06);
   var c0 = hexRgb(look.colors[0]), c1 = hexRgb(look.colors[1]), c2 = hexRgb(look.colors[2]);
   var rnd = seededRand(seed || 42);
   var rings = look.rings;
+  var camShift = rx * R * 0.9;   // 커서 좌우 → 표면 회전
 
   if (rings) drawRingHalf(ctx, cx, cy, R, c2, true);
 
@@ -271,7 +274,7 @@ function drawPlanet(cv, look, t, seed) {
   ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
 
   var type = look.type;
-  var shift = (t * 5) % (R * 4);
+  var shift = ((t * 5) + camShift) % (R * 4);
 
   if (type === "gas" || type === "hot") {
     var bands = 9;
@@ -366,8 +369,9 @@ function drawPlanet(cv, look, t, seed) {
     ctx.globalAlpha = 1;
   }
 
-  // 명암 (빛: 왼쪽 위)
-  var light = ctx.createRadialGradient(cx - R * 0.45, cy - R * 0.45, R * 0.1, cx, cy, R * 1.35);
+  // 명암 (빛: 왼쪽 위 + 커서 방향으로 이동 → 카메라가 도는 느낌)
+  var lx = cx - R * 0.45 - rx * R * 0.4, ly = cy - R * 0.45 - ry * R * 0.4;
+  var light = ctx.createRadialGradient(lx, ly, R * 0.1, cx, cy, R * 1.35);
   light.addColorStop(0, "rgba(255,255,255,0.35)");
   light.addColorStop(0.4, "rgba(255,255,255,0)");
   light.addColorStop(0.75, "rgba(0,0,0,0.3)");
@@ -378,7 +382,7 @@ function drawPlanet(cv, look, t, seed) {
   // 스페큘러 하이라이트
   ctx.fillStyle = "rgba(255,255,255,0.18)";
   ctx.beginPath();
-  ctx.ellipse(cx - R * 0.42, cy - R * 0.42, R * 0.22, R * 0.13, -0.7, 0, 7);
+  ctx.ellipse(lx + R * 0.03, ly + R * 0.03, R * 0.22, R * 0.13, -0.7, 0, 7);
   ctx.fill();
 
   ctx.restore();

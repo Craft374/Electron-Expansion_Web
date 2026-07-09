@@ -124,6 +124,8 @@ function loadFromString(str) {
     s.planets.special = obj.planets.special || {};
     s.planets.blueprints = obj.planets.blueprints || {};
     s.planets.solar = obj.planets.solar || {};
+    s.planets.solarLevels = obj.planets.solarLevels || {};
+    s.planets.solarMissions = obj.planets.solarMissions || {};
   }
   if (typeof obj.planetResearched === "boolean") s.planetResearched = obj.planetResearched;
   if (typeof obj.solarSystem === "boolean") s.solarSystem = obj.solarSystem;

@@ -9,6 +9,11 @@ function el(id) { return document.getElementById(id); }
 var activeTab = "main";
 var selExtras = [];
 var planetCanvases = [];
+var selectedPlanet = null;            // { type:'solar'|'exo', id }
+var pdCam = { rx: 0, ry: 0, hover: 0, tx: 0, ty: 0, th: 0 };   // 디테일 호버 카메라
+
+function openPlanetDetail(type, id) { selectedPlanet = { type: type, id: id }; sig.planets = null; updateUI(); }
+function closePlanetDetail() { selectedPlanet = null; sig.planets = null; updateUI(); }
 var sig = {};   // 섹션별 구조 시그니처 (바뀌면 재생성)
 
 function shadeHex(hex, f) {
@@ -557,6 +562,10 @@ function buildPlanets() {
     planetCanvases.push({ cv: card.querySelector("canvas"), look: p.look, seed: 100 + i * 17 });
     if (!owned) {
       el("solar-btn-" + p.id).onclick = function () { buildSolarPlanet(p.id); updateUI(); };
+    } else {
+      card.style.cursor = "pointer";
+      card.title = "클릭하면 행성 화면 열기";
+      card.onclick = function () { openPlanetDetail("solar", p.id); };
     }
   });
 
@@ -629,6 +638,11 @@ function buildPlanets() {
         updateUI();
       };
     }
+    if (built) {
+      card.style.cursor = "pointer";
+      card.title = "클릭하면 행성 화면 열기";
+      card.onclick = function () { openPlanetDetail("exo", x.id); };
+    }
   });
 }
 
@@ -653,6 +667,45 @@ function buildCustomChips() {
   }
 }
 
+function updatePlanetDetail() {
+  var sel = selectedPlanet;
+  if (sel.type === "solar") {
+    var p = null;
+    SOLAR_PLANETS.forEach(function (q) { if (q.id === sel.id) p = q; });
+    if (!p || !state.planets.solar[p.id]) { closePlanetDetail(); return; }
+    el("pd-name").textContent = p.name;
+    el("pd-nick").textContent = "태양계 행성";
+    el("pd-lore").textContent = p.desc;
+    setHidden("pd-solar", false);
+    setHidden("pd-exo", true);
+    el("pd-level").textContent = "Lv " + solarPlanetLevel(p.id);
+    el("pd-boost").textContent = "×" + format(solarPlanetBoost(p), 2) +
+      (state.planets.solarMissions[p.id] ? " (미션 완료)" : "");
+    var cost = solarPlanetLevelCost(p.id);
+    el("pd-cost").innerHTML = costHTML(cost);
+    el("pd-levelup").disabled = !canAfford(cost);
+    el("pd-levelup-max").disabled = !canAfford(cost);
+    var ms = solarPlanetMission(p);
+    var done = !!state.planets.solarMissions[p.id];
+    el("pd-mission").innerHTML = done
+      ? '<span style="color:var(--green)">완료됨</span>'
+      : ELEMENTS[ms.elem - 1].name + " " + format(ms.target, 1) + " 보유 (현재 " + format(state.elements[ms.elem - 1], 1) + ")";
+    var mbtn = el("pd-mission-claim");
+    setHidden("pd-mission-claim", done);
+    if (!done) mbtn.disabled = !solarMissionReady(p.id);
+  } else {
+    var x = null;
+    EXOPLANETS.forEach(function (e) { if (e.id === sel.id) x = e; });
+    if (!x || !state.planets.special[x.id]) { closePlanetDetail(); return; }
+    el("pd-name").textContent = x.name;
+    el("pd-nick").textContent = x.nick;
+    el("pd-lore").textContent = x.lore;
+    setHidden("pd-solar", true);
+    setHidden("pd-exo", false);
+    el("pd-effect").textContent = "✦ " + x.effect;
+  }
+}
+
 function updatePlanets() {
   var s = planetsSig();
   if (sig.planets !== s) {
@@ -660,6 +713,14 @@ function updatePlanets() {
     buildCustomChips();
     sig.planets = s;
   }
+
+  // 행성 고유 화면 (디테일) 토글
+  var showDetail = !!selectedPlanet;
+  setHidden("planet-detail", !showDetail);
+  ["planet-tier1", "planet-tier2", "panel-custom", "planet-tier4"].forEach(function (id) {
+    el(id).style.display = showDetail ? "none" : "";
+  });
+  if (showDetail) { updatePlanetDetail(); return; }
 
   // 티어 점진 공개: 티어1은 처음부터, 이후 태양 레벨 50당 하나씩 공개
   var lv = state.star ? state.star.level : 0;
@@ -1105,7 +1166,21 @@ function animateCanvases(ts) {
   if (activeTab === "solar" && state.solarSystem) {
     drawSolarSystem(el("cv-solar"), state.star ? state.star.temp : 5778, t);
   }
-  if (activeTab === "planets" && ts - lastPlanetDraw > 66) {
+  // 행성 디테일: 부드러운 호버 카메라 (매 프레임)
+  if (activeTab === "planets" && selectedPlanet) {
+    pdCam.rx += (pdCam.tx - pdCam.rx) * 0.12;
+    pdCam.ry += (pdCam.ty - pdCam.ry) * 0.12;
+    pdCam.hover += (pdCam.th - pdCam.hover) * 0.12;
+    var dcv = el("cv-planet-detail");
+    if (dcv && dcv.isConnected) {
+      var look = selectedPlanet.type === "solar"
+        ? (SOLAR_PLANETS.filter(function (q) { return q.id === selectedPlanet.id; })[0] || {}).look
+        : (EXOPLANETS.filter(function (q) { return q.id === selectedPlanet.id; })[0] || {}).look;
+      if (look) drawPlanet(dcv, look, t, 777, pdCam);
+    }
+  }
+
+  if (activeTab === "planets" && !selectedPlanet && ts - lastPlanetDraw > 66) {
     lastPlanetDraw = ts;
     planetCanvases.forEach(function (p) {
       if (p.cv.isConnected) drawPlanet(p.cv, p.look, t, p.seed);
@@ -1179,6 +1254,28 @@ function initUI() {
   // 행성
   el("btn-random-planet").onclick = function () { buildRandomPlanet(); updateUI(); };
   el("btn-planet-research").onclick = function () { researchPlanet(); updateUI(); };
+
+  // 행성 디테일 (고유 화면)
+  el("btn-planet-back").onclick = function () { closePlanetDetail(); };
+  el("pd-levelup").onclick = function () {
+    if (selectedPlanet) buySolarPlanetLevel(selectedPlanet.id); updateUI();
+  };
+  el("pd-levelup-max").onclick = function () {
+    if (selectedPlanet) { var g = 0; while (g++ < 500 && buySolarPlanetLevel(selectedPlanet.id)) {} }
+    updateUI();
+  };
+  el("pd-mission-claim").onclick = function () {
+    if (selectedPlanet) claimSolarMission(selectedPlanet.id); updateUI();
+  };
+  // 디테일 캔버스 호버 → 카메라 이동
+  var pdCanvas = el("cv-planet-detail");
+  pdCanvas.addEventListener("mousemove", function (e) {
+    var r = pdCanvas.getBoundingClientRect();
+    pdCam.tx = ((e.clientX - r.left) / r.width - 0.5) * 2;
+    pdCam.ty = ((e.clientY - r.top) / r.height - 0.5) * 2;
+    pdCam.th = 1;
+  });
+  pdCanvas.addEventListener("mouseleave", function () { pdCam.tx = 0; pdCam.ty = 0; pdCam.th = 0; });
   el("btn-build-custom").onclick = function () {
     if (buildCustomPlanet(selExtras)) { selExtras = []; }
     updateUI();

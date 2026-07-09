@@ -385,6 +385,23 @@ var EXOPLANETS = [
     look: { type: "dark", colors: ["#3a3550", "#1c1930", "#7a6fa8"] } }
 ];
 
+// 행성 성장·채굴·시너지 (§6 행성 디테일)
+var PLANET_GROWTH = {
+  boostGrow: 1.5,        // 태양계 행성 레벨당 부양 배율 ×1.5
+  costFrac: 0.03,        // 레벨업 비용 = 건설 원소량 × 이 비율 × costMult^level
+  costMult: 4,
+  missionMult: 5         // 미션 클리어 시 해당 행성 부양 ×5 (1회성)
+};
+var PLANET_MINE = {
+  randomRate: 0.02,      // 랜덤 행성: 그 원소 자기생산 +2%/초
+  customRate: 0.012      // 커스텀 행성: extras 각 원소 +1.2%/초
+};
+var PLANET_SYNERGY = {
+  solar5: 3,             // 태양계 행성 5개↑: 전체 원소 ×3
+  solar9: 5,             // 9개 전부: 추가 ×5
+  random4: 2             // 랜덤 행성 4개↑: 전체 ×2
+};
+
 // 티어 2: 태양계 행성 — 태양 Lv 365의 핵심 조력자
 var SOLAR_PLANETS = [
   { id: "mercury", name: "수성", els: { 26: "1e197", 14: "3e89", 8: "8e57", 12: "1e79" },
