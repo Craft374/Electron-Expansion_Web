@@ -635,3 +635,51 @@ input[type="range"] {
   .nav-badge { right: 6px; top: 8px; transform: none; }
   .hero-num { font-size: 40px; }
 }
+
+/* ===== 모바일(≤620px): 가로 오버플로우 방지 · 세로 스택 ===== */
+@media (max-width: 620px) {
+  #sidebar { width: 54px; padding: 12px 6px; }
+  .logo-mark { width: 40px; height: 40px; }
+  #content { padding: 10px 8px; gap: 10px; }
+  .panel { padding: 14px 13px; }
+  .panel-head { font-size: 15px; margin-bottom: 10px; }
+  .panel-sub { font-size: 12.5px; }
+
+  /* 히어로: 최대구매 버튼이 겹치지 않게 아래로 */
+  .hero-num { font-size: 30px; letter-spacing: 0; }
+  .hero-unit { font-size: 18px; }
+  .hero-label { font-size: 14px; }
+  .hero-panel { padding-bottom: 16px; }
+  .corner-btn { position: static; display: block; width: 100%; margin-top: 14px; }
+
+  /* 생성기 줄: 정보 위 / 버튼 아래 세로 스택 */
+  .gen-row { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px 2px; }
+  .gen-btns { min-width: 0; width: 100%; }
+  .gen-btns .btn { font-size: 13px; padding: 10px; }
+
+  /* 모든 카드/업그레이드 그리드 → 1열 (가로 넘침 방지) */
+  #elem-grid, #iso-list, #special-list, #synth-list, #auto-list,
+  #challenge-list, #comp-up-list, .upgrade-grid,
+  #solar-planet-grid, #exo-list { grid-template-columns: 1fr; }
+  .ach-grid { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 8px; }
+
+  /* 도전과제 타일 툴팁이 화면 밖으로 안 나가게 */
+  .ach-tile .at-tip { width: 170px; }
+
+  /* 버튼 줄바꿈 · 터치 크기 */
+  .btn { padding: 10px 14px; }
+  .btn-row { gap: 6px; }
+
+  /* 비용 표시 줄바꿈 허용 */
+  .cost-item { white-space: normal; }
+
+  /* 숫자 입력이 넘치지 않게 */
+  input[type="number"] { width: 100%; max-width: 220px; }
+
+  /* 항성/행성 캔버스 패널 최소높이 축소 */
+  .star-view { min-height: 220px; }
+
+  /* 도전과제 달성 토스트가 화면을 넘지 않게 */
+  #ach-toasts { top: 10px; right: 8px; left: 8px; }
+  .ach-toast { min-width: 0; }
+}
